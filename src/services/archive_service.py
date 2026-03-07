@@ -78,18 +78,17 @@ class ArchiveService:
         diary_article = article_response.output.choices[0].message.content
         return diary_article
     
-    def process_archive(self, conversation: list) -> Dict[str, Any]:
-        """处理归档请求（手动归档）"""
-        # 1. 结构化提取
+    def _do_archive(self, conversation: list, draft_date: date = None) -> Dict[str, Any]:
+        """执行归档（通用）"""
         structured_data = self.extract_structured_data(conversation)
-        
-        # 2. 生成日记文章
         diary_article = self.generate_diary_article(structured_data)
         
-        # 3. 完成归档（将草稿转为正式文件）
-        filename = finalize_diary(structured_data, conversation, diary_article)
+        # 根据是否有 draft_date 选择归档方式
+        if draft_date:
+            filename = finalize_diary_for_date(structured_data, conversation, diary_article, draft_date)
+        else:
+            filename = finalize_diary(structured_data, conversation, diary_article)
         
-        # 4. 触发记忆进化
         self.memory_service.update_memory(diary_article)
         
         return {
@@ -99,23 +98,10 @@ class ArchiveService:
             "diary_article": diary_article
         }
     
+    def process_archive(self, conversation: list) -> Dict[str, Any]:
+        """处理归档请求（手动归档今日）"""
+        return self._do_archive(conversation)
+    
     def auto_archive_from_draft(self, conversation: list, draft_date: date) -> Dict[str, Any]:
-        """自动归档过期草稿（用于每日首次聊天时自动归档昨天的草稿）"""
-        # 1. 结构化提取
-        structured_data = self.extract_structured_data(conversation)
-        
-        # 2. 生成日记文章
-        diary_article = self.generate_diary_article(structured_data)
-        
-        # 3. 为指定日期完成归档
-        filename = finalize_diary_for_date(structured_data, conversation, diary_article, draft_date)
-        
-        # 4. 触发记忆进化
-        self.memory_service.update_memory(diary_article)
-        
-        return {
-            "success": True,
-            "filename": filename,
-            "structured_data": structured_data,
-            "diary_article": diary_article
-        }
+        """自动归档过期草稿（指定日期）"""
+        return self._do_archive(conversation, draft_date)
