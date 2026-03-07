@@ -1,6 +1,7 @@
 import json
 from typing import Dict, List, Any
-from src.utils.file_utils import save_archived_diary
+from datetime import date
+from src.utils.file_utils import finalize_diary, finalize_diary_for_date
 from src.services.memory_service import MemoryService
 import dashscope
 from dashscope import Generation
@@ -78,15 +79,36 @@ class ArchiveService:
         return diary_article
     
     def process_archive(self, conversation: list) -> Dict[str, Any]:
-        """处理归档请求"""
+        """处理归档请求（手动归档）"""
         # 1. 结构化提取
         structured_data = self.extract_structured_data(conversation)
         
         # 2. 生成日记文章
         diary_article = self.generate_diary_article(structured_data)
         
-        # 3. 生成日记文件
-        filename = save_archived_diary(structured_data, conversation, diary_article)
+        # 3. 完成归档（将草稿转为正式文件）
+        filename = finalize_diary(structured_data, conversation, diary_article)
+        
+        # 4. 触发记忆进化
+        self.memory_service.update_memory(diary_article)
+        
+        return {
+            "success": True,
+            "filename": filename,
+            "structured_data": structured_data,
+            "diary_article": diary_article
+        }
+    
+    def auto_archive_from_draft(self, conversation: list, draft_date: date) -> Dict[str, Any]:
+        """自动归档过期草稿（用于每日首次聊天时自动归档昨天的草稿）"""
+        # 1. 结构化提取
+        structured_data = self.extract_structured_data(conversation)
+        
+        # 2. 生成日记文章
+        diary_article = self.generate_diary_article(structured_data)
+        
+        # 3. 为指定日期完成归档
+        filename = finalize_diary_for_date(structured_data, conversation, diary_article, draft_date)
         
         # 4. 触发记忆进化
         self.memory_service.update_memory(diary_article)

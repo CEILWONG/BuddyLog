@@ -5,54 +5,418 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BuddyLog - 你的老友日记</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f4f9; }
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
+        
+        * { box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            margin: 0; 
+            display: flex; 
+            height: 100vh; 
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 50%, #fd79a8 100%);
+        }
+        
         /* 侧边栏 */
-        #sidebar { width: 250px; background: #fff; border-right: 1px solid #ddd; padding: 20px; overflow-y: auto; }
-        #sidebar h2 { font-size: 1.2rem; color: #333; }
-        .file-item { padding: 8px; cursor: pointer; border-radius: 4px; color: #555; font-size: 0.9rem; }
-        .file-item:hover { background: #eef; }
-        /* 主聊天区 */
-        #main { flex: 1; display: flex; flex-direction: column; }
-        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .message { max-width: 70%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; }
-        .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 2px; }
-        .buddy { align-self: flex-start; background: #fff; border: 1px solid #ddd; border-bottom-left-radius: 2px; }
-        .system-note { align-self: center; font-size: 0.8rem; color: #888; background: #e9ecef; padding: 4px 10px; border-radius: 20px; }
+        #sidebar { 
+            width: 280px; 
+            background: rgba(255, 255, 255, 0.95); 
+            border-right: none;
+            padding: 0; 
+            overflow-y: auto; 
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-header {
+            padding: 25px 20px;
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
+            color: white;
+        }
+        
+        .sidebar-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sidebar-header p {
+            margin: 8px 0 0 0;
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+        
+        .nav-section {
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .nav-title {
+            padding: 0 20px;
+            font-size: 0.75rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .nav-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            color: #555;
+        }
+        
+        .nav-item:hover {
+            background: #fff5f5;
+            color: #e17055;
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(90deg, #ffeaa7 0%, transparent 100%);
+            color: #d63031;
+            border-left: 3px solid #fd79a8;
+        }
+        
+        .file-list {
+            padding: 0 10px;
+        }
+        
+        .file-item { 
+            padding: 10px 15px; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            color: #555; 
+            font-size: 0.85rem;
+            margin: 4px 0;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .file-item:hover { 
+            background: #fff5f5;
+            transform: translateX(3px);
+        }
+        
+        .file-item.pinned {
+            background: linear-gradient(90deg, #ffeaa7 0%, #fff 100%);
+            font-weight: 600;
+            color: #d63031;
+        }
+        
+        /* 主内容区 */
+        #main { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column;
+            padding: 20px;
+            gap: 15px;
+        }
+        
+        /* 聊天视图 */
+        #chat-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        #chat-box { 
+            flex: 1; 
+            padding: 25px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
+            max-height: calc(100vh - 220px);
+        }
+        
+        .message { 
+            max-width: 75%; 
+            padding: 14px 18px; 
+            border-radius: 18px; 
+            line-height: 1.6;
+            font-size: 0.95rem;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user { 
+            align-self: flex-end; 
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%); 
+            color: white; 
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(253, 121, 168, 0.3);
+        }
+        
+        .buddy { 
+            align-self: flex-start; 
+            background: #fff; 
+            border: 2px solid #ffeaa7;
+            color: #2d3436;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        
+        .system-note { 
+            align-self: center; 
+            font-size: 0.8rem; 
+            color: #636e72; 
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            padding: 6px 16px; 
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
         /* 输入区 */
-        #input-area { padding: 20px; background: #fff; border-top: 1px solid #ddd; display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; outline: none; }
-        button { padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; }
+        #input-area { 
+            padding: 15px 25px 25px 25px;
+            background: #fff;
+            display: flex; 
+            gap: 12px;
+            align-items: flex-start;
+        }
+        
+        textarea { 
+            flex: 1; 
+            padding: 14px 18px; 
+            border: 2px solid #ffeaa7; 
+            border-radius: 16px; 
+            outline: none;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+            line-height: 1.5;
+            transition: border-color 0.2s;
+        }
+        
+        textarea:focus {
+            border-color: #fd79a8;
+        }
+        
+        .btn-primary {
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(253, 121, 168, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(253, 121, 168, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            background: #ddd;
+            box-shadow: none;
+            transform: none;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            padding: 14px 20px;
+            background: #fff;
+            color: #fd79a8;
+            border: 2px solid #fd79a8;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: #fd79a8;
+            color: white;
+        }
+        
+        /* 阅读视图 */
+        #reader-view {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        #reader-header {
+            padding: 20px 25px;
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #reader-header h2 {
+            margin: 0;
+            color: #2d3436;
+            font-size: 1.2rem;
+        }
+        
+        #reader-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            line-height: 1.8;
+            color: #2d3436;
+        }
+        
+        #reader-content pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+        
+        /* 弹窗 */
+        #archive-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        
+        .modal-content h2 {
+            color: #d63031;
+            margin-top: 0;
+        }
+        
+        .info-box {
+            margin: 20px 0;
+            padding: 20px;
+            background: #fff5f5;
+            border-radius: 12px;
+            border-left: 4px solid #fd79a8;
+        }
+        
+        .btn-cancel {
+            padding: 12px 24px;
+            background: #dfe6e9;
+            color: #636e72;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .btn-confirm {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            color: #b2bec3;
+            padding: 40px;
+        }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <h2>📅 记忆档案</h2>
-    <div id="file-list">加载中...</div>
+    <div class="sidebar-header">
+        <h1>🧸 BuddyLog</h1>
+        <p>你的温暖日记伙伴</p>
+    </div>
+    
+    <div class="nav-section">
+        <div class="nav-title">导航</div>
+        <div class="nav-item active" onclick="showChat()" id="nav-chat">
+            💬 聊天
+        </div>
+    </div>
+    
+    <div class="nav-section">
+        <div class="nav-title">日记档案</div>
+        <div class="file-list" id="file-list">
+            <div class="empty-state">加载中...</div>
+        </div>
+    </div>
 </div>
 
 <div id="main">
-    <div id="chat-box">
-        <div class="message buddy">嘿！我是 Buddy。今天过得怎么样？随便聊聊，我会帮你记下来的。</div>
-    </div>
-    <div id="input-area">
-        <input type="text" id="user-input" placeholder="跟 Buddy 说点什么..." onkeydown="if(event.key==='Enter') sendMessage()">
-        <button onclick="sendMessage()" id="send-btn">发送</button>
-        <button onclick="completeToday()" id="complete-btn">完成今日记录</button>
+    <!-- 聊天视图 -->
+    <div id="chat-view">
+        <div id="chat-box">
+            <div class="message buddy">嘿！我是 Buddy 🧸<br>今天过得怎么样？随便聊聊，我会帮你记下来的～</div>
+        </div>
+        <div id="input-area">
+            <textarea id="user-input" placeholder="跟 Buddy 说点什么..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+            <button onclick="sendMessage()" id="send-btn" class="btn-primary">发送</button>
+            <button onclick="completeToday()" id="complete-btn" class="btn-secondary">完成今日</button>
+        </div>
     </div>
     
-    <!-- 日记确认弹窗 -->
-    <div id="archive-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; width: 80%; max-width: 600px;">
-            <h2>📝 确认今日记录</h2>
-            <div id="structured-data" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;"></div>
-            <div id="diary-preview" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; max-height: 200px; overflow-y: auto;"></div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button onclick="cancelArchive()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">取消</button>
-                <button onclick="confirmArchive()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">确认归档</button>
-            </div>
+    <!-- 阅读视图 -->
+    <div id="reader-view">
+        <div id="reader-header">
+            <h2 id="reader-title">📄 查看文件</h2>
+            <button onclick="showChat()" class="btn-secondary">返回聊天</button>
+        </div>
+        <div id="reader-content">
+            <div class="empty-state">选择一个文件查看内容</div>
+        </div>
+    </div>
+</div>
+
+<!-- 日记确认弹窗 -->
+<div id="archive-modal">
+    <div class="modal-content">
+        <h2>📝 确认今日记录</h2>
+        <div id="structured-data" class="info-box"></div>
+        <div id="diary-preview" class="info-box" style="max-height: 200px; overflow-y: auto;"></div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+            <button onclick="cancelArchive()" class="btn-cancel">取消</button>
+            <button onclick="confirmArchive()" class="btn-confirm">确认归档</button>
         </div>
     </div>
 </div>
@@ -61,27 +425,132 @@
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
+    const chatView = document.getElementById('chat-view');
+    const readerView = document.getElementById('reader-view');
+    const navChat = document.getElementById('nav-chat');
     let history = [];
+
+    // 自动调整文本框高度
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+
+    // 处理键盘事件
+    function handleKeyDown(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    }
+
+    // 显示聊天视图
+    function showChat() {
+        chatView.style.display = 'flex';
+        readerView.style.display = 'none';
+        navChat.classList.add('active');
+        document.querySelectorAll('.file-item').forEach(item => {
+            item.classList.remove('active');
+        });
+    }
+
+    // 显示阅读视图
+    function showReader(filename) {
+        chatView.style.display = 'none';
+        readerView.style.display = 'flex';
+        navChat.classList.remove('active');
+        document.querySelectorAll('.file-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        document.getElementById('reader-title').innerText = '📄 ' + filename.replace('.md', '');
+        loadFileContent(filename);
+    }
+
+    // 加载文件内容
+    async function loadFileContent(filename) {
+        try {
+            const res = await fetch('/file/' + encodeURIComponent(filename));
+            if (res.ok) {
+                const content = await res.text();
+                // 简单渲染 Markdown
+                let html = content
+                    .replace(/# (.*)/g, '<h1>$1</h1>')
+                    .replace(/## (.*)/g, '<h2>$1</h2>')
+                    .replace(/### (.*)/g, '<h3>$1</h3>')
+                    .replace(/```json\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+                    .replace(/```\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\n/g, '<br>');
+                document.getElementById('reader-content').innerHTML = html;
+            } else {
+                document.getElementById('reader-content').innerHTML = '<div class="empty-state">文件不存在</div>';
+            }
+        } catch (e) {
+            document.getElementById('reader-content').innerHTML = '<div class="empty-state">加载失败</div>';
+        }
+    }
 
     // 加载文件列表
     async function loadFiles() {
-        const res = await fetch('/files');
-        const files = await res.json();
-        const list = document.getElementById('file-list');
-        list.innerHTML = files.length ? '' : '<div style="color:#999">暂无记录</div>';
-        files.forEach(f => {
-            const div = document.createElement('div');
-            div.className = 'file-item';
-            div.innerText = f.replace('.md', '');
-            div.onclick = () => alert('查看功能开发中... (文件位于 data/' + f + ')');
-            list.appendChild(div);
-        });
+        try {
+            const res = await fetch('/files');
+            const files = await res.json();
+            const list = document.getElementById('file-list');
+            
+            if (files.length === 0) {
+                list.innerHTML = '<div class="empty-state">暂无记录</div>';
+                return;
+            }
+            
+            list.innerHTML = '';
+            
+            // 置顶文件：profile 和 memory
+            const pinnedFiles = ['profile.md', 'memory.md'];
+            const diaryFiles = files.filter(f => !pinnedFiles.includes(f) && !f.includes('_draft'));
+            const draftFiles = files.filter(f => f.includes('_draft'));
+
+            // 先显示置顶文件
+            pinnedFiles.forEach(filename => {
+                if (files.includes(filename)) {
+                    const div = document.createElement('div');
+                    div.className = 'file-item pinned';
+                    const icon = filename === 'profile.md' ? '👤' : '🧠';
+                    const label = filename === 'profile.md' ? '个人档案' : '长期记忆';
+                    div.innerHTML = `${icon} ${label}`;
+                    div.onclick = (e) => showReader(filename);
+                    list.appendChild(div);
+                }
+            });
+
+            // 显示草稿文件
+            draftFiles.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.style.color = '#e17055';
+                div.innerHTML = `📝 ${f.replace('.md', '').replace('diary_', '')}`;
+                div.onclick = (e) => showReader(f);
+                list.appendChild(div);
+            });
+
+            // 再显示日记文件
+            diaryFiles.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.innerHTML = `📓 ${f.replace('.md', '').replace('diary_', '')}`;
+                div.onclick = (e) => showReader(f);
+                list.appendChild(div);
+            });
+        } catch (e) {
+            document.getElementById('file-list').innerHTML = '<div class="empty-state">加载失败</div>';
+        }
     }
 
     function appendMessage(role, text) {
         const div = document.createElement('div');
         div.className = `message ${role}`;
-        div.innerText = text;
+        div.innerHTML = text.replace(/\n/g, '<br>');
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
@@ -92,6 +561,7 @@
 
         appendMessage('user', text);
         userInput.value = '';
+        userInput.style.height = 'auto';
         sendBtn.disabled = true;
 
         history.push({ role: "user", content: text });
@@ -100,18 +570,28 @@
             const res = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: text, history: history.slice(-10) }) // 只传最近10条
+                body: JSON.stringify({ content: text, history: history.slice(-10) })
             });
             const data = await res.json();
 
             appendMessage('buddy', data.reply);
 
+            // 显示自动归档通知
+            if (data.auto_archived && data.auto_archived.length > 0) {
+                data.auto_archived.forEach(archived => {
+                    const note = document.createElement('div');
+                    note.className = 'system-note';
+                    note.innerText = `✨ 已自动归档 ${archived.old_draft.replace('_draft.md', '')}`;
+                    chatBox.appendChild(note);
+                });
+            }
+
             if (data.diary_saved) {
                 const note = document.createElement('div');
                 note.className = 'system-note';
-                note.innerText = `✨ Buddy 已将其记入 ${data.filename}`;
+                note.innerText = `✨ Buddy 已记下～`;
                 chatBox.appendChild(note);
-                loadFiles(); // 刷新列表
+                loadFiles();
             }
 
             history.push({ role: "assistant", content: data.reply });
@@ -139,7 +619,6 @@
         completeBtn.disabled = true;
 
         try {
-            // 调用归档API
             const res = await fetch('/archive', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -149,22 +628,20 @@
             const data = await res.json();
             
             if (data.success) {
-                // 显示确认弹窗
                 const modal = document.getElementById('archive-modal');
                 const structuredData = document.getElementById('structured-data');
                 const diaryPreview = document.getElementById('diary-preview');
                 
-                // 显示结构化数据
-                structuredData.innerHTML = `<h3>结构化信息</h3>
-                    <p><strong>事件:</strong> ${data.structured_data.events.join(', ')}</p>
-                    <p><strong>人物:</strong> ${data.structured_data.people.join(', ')}</p>
-                    <p><strong>情绪:</strong> ${data.structured_data.emotions.join(', ')}</p>
-                    <p><strong>想法:</strong> ${data.structured_data.ideas.join(', ')}</p>`;
+                structuredData.innerHTML = `
+                    <h3>📊 结构化信息</h3>
+                    <p><strong>📍 事件:</strong> ${data.structured_data.events.join(', ') || '无'}</p>
+                    <p><strong>👥 人物:</strong> ${data.structured_data.people.join(', ') || '无'}</p>
+                    <p><strong>💭 情绪:</strong> ${data.structured_data.emotions.join(', ') || '无'}</p>
+                    <p><strong>💡 想法:</strong> ${data.structured_data.ideas.join(', ') || '无'}</p>
+                `;
                 
-                // 显示日记预览
-                diaryPreview.innerHTML = `<h3>日记预览</h3><p>${data.diary_article}</p>`;
+                diaryPreview.innerHTML = `<h3>📝 日记预览</h3><p>${data.diary_article}</p>`;
                 
-                // 显示弹窗
                 modal.style.display = 'block';
             } else {
                 alert('归档失败，请稍后再试');
@@ -178,25 +655,19 @@
         }
     }
 
-    // 取消归档
     function cancelArchive() {
-        const modal = document.getElementById('archive-modal');
-        modal.style.display = 'none';
+        document.getElementById('archive-modal').style.display = 'none';
     }
 
-    // 确认归档
     function confirmArchive() {
-        const modal = document.getElementById('archive-modal');
-        modal.style.display = 'none';
+        document.getElementById('archive-modal').style.display = 'none';
         
-        // 显示成功消息
         const note = document.createElement('div');
         note.className = 'system-note';
         note.innerText = '✨ 今日记录已完成归档！';
         chatBox.appendChild(note);
         chatBox.scrollTop = chatBox.scrollHeight;
         
-        // 刷新文件列表
         loadFiles();
     }
 </script>

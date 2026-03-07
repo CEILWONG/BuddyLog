@@ -1,6 +1,12 @@
 import json
 from typing import Dict, Any, Optional
-from src.utils.file_utils import load_profile, load_memory, load_recent_diaries, save_diary
+from src.utils.file_utils import (
+    load_profile, 
+    load_memory, 
+    load_recent_diaries, 
+    append_to_draft,
+    auto_archive_expired_drafts
+)
 import dashscope
 from dashscope import Generation
 
@@ -8,8 +14,13 @@ from dashscope import Generation
 class ChatService:
     """聊天服务类"""
     
-    def __init__(self, model: str):
+    def __init__(self, model: str, archive_service=None):
         self.model = model
+        self.archive_service = archive_service
+    
+    def set_archive_service(self, archive_service):
+        """设置归档服务（用于自动归档过期草稿）"""
+        self.archive_service = archive_service
     
     def build_system_prompt(self) -> str:
         """构建系统提示"""
@@ -24,10 +35,10 @@ class ChatService:
         {memory}
 
         # 近期日记
-        {"\n---\n".join(recent_diaries[:5])}  # 只包含最近5篇的内容
+        {"\n---\n".join(recent_diaries[:7])}  # 只包含最近7篇的内容
 
         任务：
-        1. 像朋友一样回应用户的话。
+        1. 像朋友一样回应用户的话,不要太多的AI味,尽量用自然语言。。
         2. 从对话中提取关键信息，为用户生成一段简短的“日记摘要”。
 
         输出格式要求：
@@ -75,19 +86,29 @@ class ChatService:
     
     def process_chat(self, content: str, history: list) -> Dict[str, Any]:
         """处理聊天请求"""
-        # 生成响应
+        # 1. 首先检查并自动归档过期草稿（如果存在且archive_service已设置）
+        auto_archived = []
+        if self.archive_service:
+            auto_archived = auto_archive_expired_drafts(self.archive_service)
+        
+        # 2. 生成响应
         result = self.generate_response(content, history)
         
         reply_text = result.get("reply", "")
         diary_entry = result.get("diary_entry")
         
-        # 如果有日记内容，保存到本地 .md 文件
-        filename = None
-        if diary_entry:
-            filename = save_diary(diary_entry, history, reply_text)
+        # 3. 追加到今天的草稿文件
+        filename = append_to_draft(diary_entry, content, reply_text)
+        diary_saved = diary_entry is not None and diary_entry != ""
         
-        return {
+        response = {
             "reply": reply_text,
             "filename": filename,
-            "diary_saved": bool(filename)
+            "diary_saved": diary_saved
         }
+        
+        # 4. 如果有自动归档的文件，添加到响应中
+        if auto_archived:
+            response["auto_archived"] = auto_archived
+        
+        return response

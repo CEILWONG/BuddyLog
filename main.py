@@ -31,8 +31,8 @@ app.add_middleware(
 )
 
 # 初始化服务
-chat_service = ChatService(MODEL)
 archive_service = ArchiveService(MODEL)
+chat_service = ChatService(MODEL, archive_service)
 
 
 @app.get("/")
