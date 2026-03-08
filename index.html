@@ -183,6 +183,34 @@
             font-weight: 600;
         }
         
+        /* 正在输入动画 */
+        .typing {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 14px 18px !important;
+        }
+        
+        .typing .dot {
+            font-size: 1.5rem;
+            line-height: 1;
+            animation: typingBlink 1.4s infinite;
+            color: #fd79a8;
+        }
+        
+        .typing .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typingBlink {
+            0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+            30% { opacity: 1; transform: scale(1.2); }
+        }
+        
         /* 输入区 */
         #input-area { 
             padding: 15px 25px 25px 25px;
@@ -566,6 +594,14 @@
 
         history.push({ role: "user", content: text });
 
+        // 显示正在输入的动画
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message buddy typing';
+        typingDiv.id = 'typing-indicator';
+        typingDiv.innerHTML = '<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>';
+        chatBox.appendChild(typingDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
         try {
             const res = await fetch('/chat', {
                 method: 'POST',
@@ -573,6 +609,10 @@
                 body: JSON.stringify({ content: text, history: history.slice(-10) })
             });
             const data = await res.json();
+
+            // 移除正在输入动画
+            const typingEl = document.getElementById('typing-indicator');
+            if (typingEl) typingEl.remove();
 
             appendMessage('buddy', data.reply);
 
@@ -586,16 +626,19 @@
                 });
             }
 
-            if (data.diary_saved) {
-                const note = document.createElement('div');
-                note.className = 'system-note';
-                note.innerText = `✨ Buddy 已记下～`;
-                chatBox.appendChild(note);
-                loadFiles();
-            }
+            // 显示已记录提示
+            const note = document.createElement('div');
+            note.className = 'system-note';
+            note.innerText = `✨ Buddy 已记下～`;
+            chatBox.appendChild(note);
+            loadFiles();
 
             history.push({ role: "assistant", content: data.reply });
         } catch (e) {
+            // 移除正在输入动画
+            const typingEl = document.getElementById('typing-indicator');
+            if (typingEl) typingEl.remove();
+            
             appendMessage('buddy', '哎呀，网络开小差了，请稍后再试。');
             console.error(e);
         } finally {
@@ -618,6 +661,14 @@
         sendBtn.disabled = true;
         completeBtn.disabled = true;
 
+        // 显示加载提示
+        const loadingNote = document.createElement('div');
+        loadingNote.className = 'system-note';
+        loadingNote.id = 'archive-loading';
+        loadingNote.innerText = '📝 正在整理今日记录...';
+        chatBox.appendChild(loadingNote);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
         try {
             const res = await fetch('/archive', {
                 method: 'POST',
@@ -627,6 +678,10 @@
             
             const data = await res.json();
             
+            // 移除加载提示
+            const loadingEl = document.getElementById('archive-loading');
+            if (loadingEl) loadingEl.remove();
+
             if (data.success) {
                 const modal = document.getElementById('archive-modal');
                 const structuredData = document.getElementById('structured-data');
@@ -647,6 +702,10 @@
                 alert('归档失败，请稍后再试');
             }
         } catch (e) {
+            // 移除加载提示
+            const loadingEl = document.getElementById('archive-loading');
+            if (loadingEl) loadingEl.remove();
+            
             console.error(e);
             alert('网络错误，请稍后再试');
         } finally {

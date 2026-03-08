@@ -55,24 +55,31 @@ class ArchiveService:
         structured_data = json.loads(extraction_response.output.choices[0].message.content)
         return structured_data
     
-    def generate_diary_article(self, structured_data: Dict[str, List[str]], date_str: str = None) -> str:
+    def generate_diary_article(self, conversation: list, date_str: str = None) -> str:
         """生成日记文章"""
         if not date_str:
             date_str = datetime.date.today().isoformat()
         
+        # 将对话转换为文本格式
+        conversation_text = "\n".join([
+            f"用户: {msg['content']}" if msg['role'] == 'user' else f"Buddy: {msg['content']}"
+            for msg in conversation
+        ])
+        
         article_prompt = f"""
-        基于以下结构化信息，生成一篇第一人称叙事散文风格的日记。
+        请基于以下用户与Buddy的对话记录，生成一篇第一人称叙事散文风格的日记。
         
         【重要】这篇日记的日期是 {date_str}，请在文章开头明确标注此日期，不要编造其他日期。
         
-        结构化信息：
-        {json.dumps(structured_data, ensure_ascii=False, indent=2)}
+        对话记录：
+        {conversation_text}
         
         要求：
-        - 第一人称视角
-        - 叙事流畅自然
-        - 包含情感表达
-        - 体现当天的主要事件和感受
+        - 第一人称视角（以用户的口吻）
+        - 基于对话原文内容，提炼成流畅的日记叙述
+        - 保留用户的真实表达和情感
+        - 叙事自然，像真实的个人日记
+        - 包含情感表达和当天的主要事件
         - 文章开头必须包含正确的日期：{date_str}
         """
         
@@ -112,12 +119,12 @@ class ArchiveService:
             date_str = datetime.date.today().isoformat()
         
         structured_data = self.extract_structured_data(conversation)
-        diary_article = self.generate_diary_article(structured_data, date_str)
+        diary_article = self.generate_diary_article(conversation, date_str)
         
         filename = finalize_diary(structured_data, conversation, diary_article, 
                                   draft_date=draft_date, delete_draft=delete_draft)
         
-        self.memory_service.update_memory(diary_article)
+        self.memory_service.update_memory(conversation, date_str)
         
         return {
             "success": True,

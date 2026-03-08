@@ -41,7 +41,7 @@ class ChatService:
 【用户档案】
 {profile_info if profile_info else '慢慢了解中'}
 
-输出JSON格式：{{"reply": "你的回复", "diary_entry": "日记摘要或null"}}"""
+输出JSON格式：{{"reply": "你的回复"}}"""
         
         return system_prompt
     
@@ -85,16 +85,13 @@ class ChatService:
         result = self.generate_response(content, history)
         
         reply_text = result.get("reply", "")
-        diary_entry = result.get("diary_entry")
         
         # 3. 追加到今天的草稿文件
-        filename = append_to_draft(diary_entry, content, reply_text)
-        diary_saved = diary_entry is not None and diary_entry != ""
+        filename = append_to_draft(content, reply_text)
         
         response = {
             "reply": reply_text,
-            "filename": filename,
-            "diary_saved": diary_saved
+            "filename": filename
         }
         
         # 4. 如果有自动归档的文件，添加到响应中

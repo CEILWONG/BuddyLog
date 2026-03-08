@@ -9,27 +9,36 @@ class MemoryService:
     def __init__(self, model: str):
         self.model = model
     
-    def update_memory(self, new_diary_content: str):
-        """更新长期记忆，融合新日记内容"""
+    def update_memory(self, conversation: list, date_str: str):
+        """更新长期记忆，融合新的对话内容"""
         # 加载旧记忆
         old_memory = load_memory()
         
+        # 将对话转换为文本格式
+        conversation_text = "\n".join([
+            f"用户: {msg['content']}" if msg['role'] == 'user' else f"Buddy: {msg['content']}"
+            for msg in conversation
+        ])
+        
         # 构建记忆融合提示
         memory_prompt = f"""
-        请根据新的日记内容，更新用户的长期记忆。
+        请根据用户与Buddy的对话记录，更新用户的长期记忆。
+        
+        【重要】本次对话的日期是 {date_str}，请根据日期判断信息的时效性，如有变化，用新的信息覆盖旧的事实。
         
         旧记忆：
         {old_memory}
         
-        新日记：
-        {new_diary_content}
+        新对话记录（{date_str}）：
+        {conversation_text}
         
         更新要求：
         1. 去重：去除重复的信息
-        2. 更新：用新的事实覆盖旧的事实（如换工作、搬家等）
+        2. 更新：用新的事实覆盖旧的事实（如换工作、搬家等），以日期判断新旧
         3. 提炼：提取重要信息，保持记忆简洁
         4. 保留：保留未完结的事项
         5. 格式：保持原有的Markdown格式
+        6. 时效：注意对话日期{date_str}，这是最新信息
         """
         
         memory_messages = [

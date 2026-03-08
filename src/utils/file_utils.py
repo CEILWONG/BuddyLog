@@ -70,7 +70,7 @@ def get_today_draft_file():
     return draft_path if os.path.exists(draft_path) else None
 
 
-def append_to_draft(diary_entry, user_msg, assistant_reply):
+def append_to_draft(user_msg, assistant_reply):
     """追加内容到今天的草稿文件"""
     today = datetime.date.today().isoformat()
     draft_path = os.path.join(DATA_DIR, f"diary_{today}_draft.md")
@@ -84,8 +84,6 @@ def append_to_draft(diary_entry, user_msg, assistant_reply):
     with open(draft_path, "a", encoding="utf-8") as f:
         f.write(f"\n**[{now}] 用户**: {user_msg}\n\n")
         f.write(f"**[{now}] Buddy**: {assistant_reply}\n\n")
-        if diary_entry:
-            f.write(f"**[{now}] 日记摘要**: {diary_entry}\n\n---\n")
     
     return os.path.basename(draft_path)
 
