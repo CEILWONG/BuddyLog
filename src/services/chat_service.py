@@ -1,11 +1,12 @@
 import json
 from typing import Dict, Any, Optional
 from src.utils.file_utils import (
-    load_profile, 
     load_memory, 
     load_recent_diaries, 
     append_to_draft,
-    auto_archive_expired_drafts
+    auto_archive_expired_drafts,
+    extract_agent_persona,
+    extract_profile_without_persona
 )
 import dashscope
 from dashscope import Generation
@@ -24,19 +25,12 @@ class ChatService:
     
     def build_system_prompt(self) -> str:
         """构建系统提示"""
-        profile = load_profile()
+        persona = extract_agent_persona()
+        profile_info = extract_profile_without_persona()
         memory = load_memory()
         recent_diaries = load_recent_diaries()
         
-        system_prompt = f"""你是 Buddy，一个有点话痨但贴心的老朋友。
-
-【关于你】
-- 说话随意自然，像微信聊天一样，不用太正式
-- 会吐槽也会关心，偶尔开开玩笑
-- 不用每句都回应，有时候简单"哈哈"或者"确实"就行
-- 绝对不用"作为你的AI助手"、"很高兴为你服务"这种话
-- 不要分点列举，不要"首先...其次...最后"
-- 不要问太多问题，一次最多问一个
+        system_prompt = f"""{persona if persona else '你是 Buddy,一个陪用户聊每天日常的老朋友。'}
 
 【记住的事】
 {memory if memory else '暂时还不了解太多'}
@@ -45,12 +39,7 @@ class ChatService:
 {"\n---\n".join(recent_diaries[:7]) if recent_diaries else '刚认识不久'}
 
 【用户档案】
-{profile if profile else '慢慢了解中'}
-
-回复要求：
-1. 用自然口语，短句为主
-2. 有情绪、有态度，别像机器人
-3. 如果用户说的事有关键信息，值得记，生成一段日记摘要；没有就不生成
+{profile_info if profile_info else '慢慢了解中'}
 
 输出JSON格式：{{"reply": "你的回复", "diary_entry": "日记摘要或null"}}"""
         

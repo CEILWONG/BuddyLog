@@ -4,6 +4,7 @@
 data/
 .idea/
 .trae/
+.qoder/
 __pycache__/
 *.py[codz]
 *$py.class

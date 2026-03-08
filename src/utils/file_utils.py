@@ -25,6 +25,32 @@ def load_profile():
     return _load_md_file("profile.md")
 
 
+def extract_agent_persona() -> str:
+    """从profile.md中提取角色设定部分"""
+    content = _load_md_file("profile.md")
+    if not content:
+        return ""
+    
+    # 查找 "## 角色设定" 部分
+    match = re.search(r'## 角色设定\s*\n(.*?)(?=\n## |\Z)', content, re.DOTALL)
+    if match:
+        persona = match.group(1).strip()
+        return persona
+    return ""
+
+
+def extract_profile_without_persona() -> str:
+    """从profile.md中提取除角色设定外的其他内容"""
+    content = _load_md_file("profile.md")
+    if not content:
+        return ""
+    
+    # 移除角色设定部分，保留其他内容
+    # 匹配从 "## 角色设定" 开始到下一个 "## " 之前的内容并移除
+    cleaned = re.sub(r'## 角色设定\s*\n.*?(?=\n## |\Z)', '', content, flags=re.DOTALL)
+    return cleaned.strip()
+
+
 def load_memory():
     """加载memory.md文件内容"""
     return _load_md_file("memory.md")
@@ -86,31 +112,41 @@ def _write_diary_file(filepath: str, date_str: str, idx: int, structured_data: d
         f.write(f"## 日记文章\n{diary_article}\n\n---\n")
 
 
-def finalize_diary(structured_data: dict, conversation: list, diary_article: str) -> str:
-    """完成今日归档（删除草稿）"""
-    today = datetime.date.today().isoformat()
-    idx = _get_next_diary_index(today)
-    filename = f"diary_{today}_{idx}.md"
-    filepath = os.path.join(DATA_DIR, filename)
+def finalize_diary(structured_data: dict, conversation: list, diary_article: str, 
+                   draft_date: datetime.date = None, delete_draft: bool = False) -> str:
+    """
+    完成日记归档（通用函数）
     
-    _write_diary_file(filepath, today, idx, structured_data, conversation, diary_article)
+    Args:
+        structured_data: 结构化摘要数据
+        conversation: 对话记录列表
+        diary_article: AI生成的日记文章
+        draft_date: 指定日期（None表示今天）
+        delete_draft: 是否删除草稿文件
     
-    # 删除草稿
-    draft_path = get_today_draft_file()
-    if draft_path:
-        os.remove(draft_path)
+    Returns:
+        生成的文件名
+    """
+    # 确定日期
+    if draft_date:
+        date_str = draft_date.isoformat()
+    else:
+        date_str = datetime.date.today().isoformat()
     
-    return filename
-
-
-def finalize_diary_for_date(structured_data: dict, conversation: list, diary_article: str, draft_date) -> str:
-    """为指定日期归档（用于自动归档）"""
-    date_str = draft_date.isoformat()
+    # 获取索引并生成文件名
     idx = _get_next_diary_index(date_str)
     filename = f"diary_{date_str}_{idx}.md"
     filepath = os.path.join(DATA_DIR, filename)
     
+    # 写入文件
     _write_diary_file(filepath, date_str, idx, structured_data, conversation, diary_article)
+    
+    # 按需删除草稿
+    if delete_draft:
+        draft_path = get_today_draft_file()
+        if draft_path:
+            os.remove(draft_path)
+    
     return filename
 
 
