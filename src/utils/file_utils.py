@@ -3,7 +3,7 @@ import datetime
 import json
 import re
 
-DATA_DIR = "data"
+DATA_DIR = os.getenv("DATA_DIR", "data")
 
 
 def ensure_data_dir():
