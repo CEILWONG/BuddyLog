@@ -30,13 +30,15 @@ class ChatService:
         memory = load_memory()
         recent_diaries = load_recent_diaries()
         
+        recent_diaries_text = "\n---\n".join(recent_diaries[:7]) if recent_diaries else '刚认识不久'
+        
         system_prompt = f"""{persona if persona else '你是 Buddy,一个陪用户聊每天日常的老朋友。'}
 
 【记住的事】
 {memory if memory else '暂时还不了解太多'}
 
 【最近聊的】
-{"\n---\n".join(recent_diaries[:7]) if recent_diaries else '刚认识不久'}
+{recent_diaries_text}
 
 【用户档案】
 {profile_info if profile_info else '慢慢了解中'}
@@ -70,6 +72,19 @@ class ChatService:
             content = response.output.choices[0].message.content
             # 解析 JSON 响应
             result = json.loads(content)
+            
+            # 获取 token 使用量
+            usage = response.usage if hasattr(response, 'usage') else None
+            if usage:
+                input_tokens = usage.input_tokens if hasattr(usage, 'input_tokens') else 0
+                output_tokens = usage.output_tokens if hasattr(usage, 'output_tokens') else 0
+                total_tokens = usage.total_tokens if hasattr(usage, 'total_tokens') else (input_tokens + output_tokens)
+                result['tokens'] = {
+                    'input': input_tokens,
+                    'output': output_tokens,
+                    'total': total_tokens
+                }
+            
             return result
         else:
             raise Exception(f"API request failed: {response.message}")
@@ -81,7 +96,7 @@ class ChatService:
         if self.archive_service:
             auto_archived = auto_archive_expired_drafts(self.archive_service)
         
-        # 2. 生成响应
+        # 2. 生成响应（包含token使用量）
         result = self.generate_response(content, history)
         
         reply_text = result.get("reply", "")
@@ -91,7 +106,12 @@ class ChatService:
         
         response = {
             "reply": reply_text,
-            "filename": filename
+            "filename": filename,
+            "tokens": result.get("tokens", {
+                "input": 0,
+                "output": 0,
+                "total": 0
+            })
         }
         
         # 4. 如果有自动归档的文件，添加到响应中

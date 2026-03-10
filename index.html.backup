@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MOSS - 550W 量子日记管理系统</title>
+    <title>BuddyLog - 你的老友日记</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
         
         * { box-sizing: border-box; }
         
-        /* ==================== 桌面端布局 ==================== */
         body { 
             font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             margin: 0; 
@@ -18,7 +17,7 @@
             background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 50%, #fd79a8 100%);
         }
         
-        /* 桌面端：侧边栏 */
+        /* 侧边栏 */
         #sidebar { 
             width: 280px; 
             background: rgba(255, 255, 255, 0.95); 
@@ -113,53 +112,13 @@
             color: #d63031;
         }
         
-        /* 桌面端：主内容区 */
+        /* 主内容区 */
         #main { 
             flex: 1; 
             display: flex; 
             flex-direction: column;
             padding: 20px;
             gap: 15px;
-        }
-        
-        /* 桌面端阅读视图 */
-        #reader-view {
-            flex: 1;
-            display: none;
-            flex-direction: column;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        #reader-header {
-            padding: 20px 25px;
-            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        #reader-header h2 {
-            margin: 0;
-            color: #2d3436;
-            font-size: 1.2rem;
-        }
-        
-        #reader-content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-            line-height: 1.8;
-            color: #2d3436;
-        }
-        
-        #reader-content pre {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            overflow-x: auto;
         }
         
         /* ==================== 移动端专用元素（默认隐藏） ==================== */
@@ -171,12 +130,11 @@
             padding: 15px 20px;
             color: white;
             flex-shrink: 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
         #mobile-header h1 {
             margin: 0;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -188,194 +146,228 @@
             opacity: 0.9;
         }
         
-        /* 移动端主内容区 */
-        #mobile-main {
-            display: none;
-            flex: 1;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
         /* 移动端底部导航栏 */
         #mobile-nav {
             display: none;
             background: rgba(255, 255, 255, 0.98);
-            box-shadow: 0 -2px 15px rgba(0,0,0,0.1);
+            border-top: 1px solid #f0f0f0;
+            padding: 6px 0 10px 0;
             flex-shrink: 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
         }
         
-        .nav-btn {
+        .mobile-nav-item {
             flex: 1;
-            padding: 15px;
-            cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-            transition: all 0.2s;
-            color: #888;
-            font-size: 0.75rem;
-            border: none;
-            background: transparent;
-            border-top: 3px solid transparent;
+            gap: 3px;
+            padding: 6px 8px;
+            cursor: pointer;
+            color: #bbb;
+            transition: all 0.25s ease;
+            position: relative;
         }
         
-        .nav-btn:hover {
-            background: #fff5f5;
-            color: #e17055;
+        .mobile-nav-item.active {
+            color: #fd79a8;
         }
         
-        .nav-btn.active {
-            color: #d63031;
-            border-top-color: #fd79a8;
-            background: linear-gradient(180deg, #fff5f5 0%, transparent 100%);
+        .mobile-nav-item.active::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 3px;
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
+            border-radius: 2px;
         }
         
-        .nav-btn span:first-child {
-            font-size: 1.3rem;
+        .mobile-nav-item .icon {
+            font-size: 1.6rem;
+            transition: transform 0.2s ease;
         }
         
-        /* 移动端聊天视图 */
-        #mobile-chat-view {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #fff;
-            overflow: hidden;
+        .mobile-nav-item.active .icon {
+            transform: scale(1.1);
         }
         
-        /* 移动端档案视图 */
+        .mobile-nav-item .label {
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        /* 移动端档案列表视图 - APP式固定布局 */
         #mobile-archive-view {
-            flex: 1;
             display: none;
             flex-direction: column;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            height: 100vh;
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 50%, #fd79a8 100%);
             overflow: hidden;
-            margin: 10px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
         }
         
-        #mobile-archive-header {
+        /* 移动端顶部标题栏 - 固定 */
+        #mobile-header {
+            display: none;
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
             padding: 15px 20px;
-            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            color: white;
             flex-shrink: 0;
+            z-index: 10;
         }
         
-        #mobile-archive-header h2 {
-            margin: 0;
-            color: #2d3436;
-            font-size: 1rem;
-        }
-        
-        #mobile-archive-list {
+        /* 圆角卡片容器 - 中间可滚动区域 */
+        .mobile-archive-card {
             flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        .archive-category {
-            margin-bottom: 20px;
-        }
-        
-        .archive-category-title {
-            font-size: 0.8rem;
-            color: #999;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-            padding-left: 5px;
-        }
-        
-        .archive-items {
+            margin: 12px;
+            margin-bottom: 0;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            overflow: hidden;
+            min-height: 0;
         }
         
-        .archive-item {
-            padding: 12px 15px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            cursor: pointer;
+        /* 卡片内标题栏 - 固定在卡片顶部 */
+        .mobile-archive-header {
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            flex-shrink: 0;
+            border-radius: 20px 20px 0 0;
+        }
+        
+        .mobile-archive-header h2 {
+            margin: 0;
+            color: #2d3436;
+            font-size: 1.1rem;
             display: flex;
             align-items: center;
-            gap: 10px;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-            color: #555;
+            gap: 8px;
+            font-weight: 700;
         }
         
-        .archive-item:hover {
-            background: #fff5f5;
-            transform: translateX(5px);
+        /* 可滚动内容区 */
+        .mobile-archive-content {
+            flex: 1;
+            padding: 20px 15px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            min-height: 0;
         }
         
-        .archive-item.pinned {
-            background: linear-gradient(90deg, #ffeaa7 0%, #fff5f5 100%);
+        .mobile-section {
+            margin-bottom: 24px;
+        }
+        
+        .mobile-section-title {
+            font-size: 0.75rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
             font-weight: 600;
-            color: #d63031;
         }
         
-        .archive-item.draft {
-            color: #e17055;
+        .mobile-file-item {
+            padding: 14px 16px;
+            background: #fff;
+            border-radius: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            transition: all 0.2s ease;
+            border: 1px solid #f5f5f5;
+        }
+        
+        .mobile-file-item:active {
+            transform: scale(0.98);
+            box-shadow: 0 1px 5px rgba(0,0,0,0.08);
+        }
+        
+        .mobile-file-item.pinned {
+            background: linear-gradient(135deg, #fff9e6 0%, #fff5f5 100%);
+            border: 1px solid #ffeaa7;
+        }
+        
+        .mobile-file-item .file-icon {
+            font-size: 1.4rem;
+        }
+        
+        .mobile-file-item .file-name {
+            flex: 1;
+            font-size: 0.95rem;
+            color: #2d3436;
+            font-weight: 500;
+        }
+        
+        .mobile-file-item.pinned .file-name {
+            color: #d63031;
+            font-weight: 600;
         }
         
         /* 移动端阅读视图 */
         #mobile-reader-view {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
             display: none;
             flex-direction: column;
+            flex: 1;
             background: rgba(255, 255, 255, 0.98);
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             z-index: 100;
-            overflow: hidden;
         }
         
-        #mobile-reader-header {
+        .mobile-reader-header {
             padding: 15px 20px;
             background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            flex-shrink: 0;
+            gap: 15px;
         }
         
-        #mobile-reader-header h2 {
-            margin: 0;
+        .mobile-reader-header .back-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
             color: #2d3436;
-            font-size: 0.95rem;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
         
-        #mobile-reader-content {
+        .mobile-reader-header h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #2d3436;
+            flex: 1;
+        }
+        
+        .mobile-reader-content {
             flex: 1;
             padding: 20px;
             overflow-y: auto;
             line-height: 1.8;
             color: #2d3436;
-            font-size: 0.95rem;
         }
         
-        #mobile-reader-content pre {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            overflow-x: auto;
-        }
-        
-        /* 聊天视图（桌面端和移动端共用） */
+        /* 聊天视图 */
         #chat-view {
             flex: 1;
             display: flex;
@@ -535,6 +527,46 @@
             color: white;
         }
         
+        /* 阅读视图 */
+        #reader-view {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        #reader-header {
+            padding: 20px 25px;
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #reader-header h2 {
+            margin: 0;
+            color: #2d3436;
+            font-size: 1.2rem;
+        }
+        
+        #reader-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            line-height: 1.8;
+            color: #2d3436;
+        }
+        
+        #reader-content pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+        
         /* 弹窗 */
         #archive-modal {
             display: none;
@@ -614,7 +646,8 @@
             }
             
             #main {
-                display: none;
+                padding: 0;
+                gap: 0;
             }
             
             #reader-view {
@@ -624,10 +657,6 @@
             /* 显示移动端元素 */
             #mobile-header {
                 display: block;
-            }
-            
-            #mobile-main {
-                display: flex;
             }
             
             #mobile-nav {
@@ -658,16 +687,33 @@
             
             textarea {
                 padding: 12px 15px;
-                min-height: 44px;
-                max-height: 100px;
+                min-height: 45px;
                 font-size: 0.9rem;
-                border-radius: 14px;
             }
             
             .btn-primary, .btn-secondary {
                 padding: 12px 18px;
                 font-size: 0.85rem;
-                border-radius: 14px;
+            }
+            
+            /* 移动端档案视图 */
+            #mobile-archive-view {
+                border-radius: 0;
+            }
+            
+            .mobile-archive-card {
+                margin: 10px;
+                margin-bottom: 0;
+                border-radius: 16px 16px 0 0;
+            }
+            
+            .mobile-archive-header {
+                border-radius: 16px 16px 0 0;
+                padding: 14px 16px;
+            }
+            
+            .mobile-archive-content {
+                padding: 16px 12px;
             }
             
             /* 弹窗适配 */
@@ -677,21 +723,22 @@
                 max-height: 80vh;
                 overflow-y: auto;
             }
-            
-            .info-box {
-                padding: 15px;
-                font-size: 0.85rem;
-            }
         }
     </style>
 </head>
 <body>
 
+<!-- 移动端顶部标题栏 -->
+<div id="mobile-header">
+    <h1>🧸 BuddyLog</h1>
+    <p>你的温暖日记伙伴</p>
+</div>
+
 <!-- 桌面端侧边栏 -->
 <div id="sidebar">
     <div class="sidebar-header">
-        <h1>◉ MOSS</h1>
-        <p>550W 量子日记管理系统</p>
+        <h1>🧸 BuddyLog</h1>
+        <p>你的温暖日记伙伴</p>
     </div>
     
     <div class="nav-section">
@@ -709,21 +756,20 @@
     </div>
 </div>
 
-<!-- 桌面端主内容区 -->
 <div id="main">
     <!-- 聊天视图 -->
     <div id="chat-view">
         <div id="chat-box">
-            <div class="message buddy">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
+            <div class="message buddy">嘿！我是 Buddy 🧸<br>今天过得怎么样？随便聊聊，我会帮你记下来的～</div>
         </div>
         <div id="input-area">
-            <textarea id="user-input" placeholder="向 MOSS 输入数据..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+            <textarea id="user-input" placeholder="跟 Buddy 说点什么..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
             <button onclick="sendMessage()" id="send-btn" class="btn-primary">发送</button>
             <button onclick="completeToday()" id="complete-btn" class="btn-secondary">完成今日</button>
         </div>
     </div>
     
-    <!-- 桌面端阅读视图 -->
+    <!-- 阅读视图 -->
     <div id="reader-view">
         <div id="reader-header">
             <h2 id="reader-title">📄 查看文件</h2>
@@ -733,59 +779,40 @@
             <div class="empty-state">选择一个文件查看内容</div>
         </div>
     </div>
-</div>
-
-<!-- 移动端顶部标题栏 -->
-<div id="mobile-header">
-    <h1>◉ MOSS</h1>
-    <p>550W 量子日记管理系统</p>
-</div>
-
-<!-- 移动端主内容区 -->
-<div id="mobile-main">
-    <!-- 移动端聊天视图 -->
-    <div id="mobile-chat-view">
-        <div id="chat-box">
-            <div class="message buddy">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
-        </div>
-        <div id="input-area">
-            <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
-            <button onclick="sendMessage()" id="mobile-send-btn" class="btn-primary">发送</button>
-            <button onclick="completeToday()" id="mobile-complete-btn" class="btn-secondary">完成</button>
-        </div>
-    </div>
     
-    <!-- 移动端档案视图 -->
+    <!-- 移动端档案列表视图 -->
     <div id="mobile-archive-view">
-        <div id="mobile-archive-header">
+        <div class="mobile-archive-header">
             <h2>📚 日记档案</h2>
         </div>
-        <div id="mobile-archive-list">
-            <div class="empty-state">加载中...</div>
+        <div class="mobile-archive-card">
+            <div class="mobile-archive-content" id="mobile-archive-content">
+                <div class="empty-state">加载中...</div>
+            </div>
         </div>
+    </div>
+</div>
+
+<!-- 移动端阅读视图（全屏覆盖） -->
+<div id="mobile-reader-view">
+    <div class="mobile-reader-header">
+        <button class="back-btn" onclick="closeMobileReader()">←</button>
+        <h2 id="mobile-reader-title">📄 查看文件</h2>
+    </div>
+    <div class="mobile-reader-content" id="mobile-reader-content">
+        <div class="empty-state">选择一个文件查看内容</div>
     </div>
 </div>
 
 <!-- 移动端底部导航栏 -->
 <div id="mobile-nav">
-    <button class="nav-btn active" onclick="showMobileChat()" id="mobile-nav-chat">
-        <span>💬</span>
-        <span>聊天</span>
-    </button>
-    <button class="nav-btn" onclick="showMobileArchive()" id="mobile-nav-archive">
-        <span>📚</span>
-        <span>日记档案</span>
-    </button>
-</div>
-
-<!-- 移动端阅读视图（全屏） -->
-<div id="mobile-reader-view">
-    <div id="mobile-reader-header">
-        <h2 id="mobile-reader-title">📄 查看文件</h2>
-        <button onclick="closeMobileReader()" class="btn-secondary">返回</button>
+    <div class="mobile-nav-item active" onclick="switchMobileTab('chat')" id="mobile-nav-chat">
+        <span class="icon">💬</span>
+        <span class="label">聊天</span>
     </div>
-    <div id="mobile-reader-content">
-        <div class="empty-state">选择一个文件查看内容</div>
+    <div class="mobile-nav-item" onclick="switchMobileTab('archive')" id="mobile-nav-archive">
+        <span class="icon">📚</span>
+        <span class="label">日记档案</span>
     </div>
 </div>
 
@@ -803,23 +830,18 @@
 </div>
 
 <script>
-    // 桌面端元素
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
     const chatView = document.getElementById('chat-view');
     const readerView = document.getElementById('reader-view');
     const navChat = document.getElementById('nav-chat');
-    
-    // 移动端元素
-    const mobileChatView = document.getElementById('mobile-chat-view');
     const mobileArchiveView = document.getElementById('mobile-archive-view');
     const mobileReaderView = document.getElementById('mobile-reader-view');
     const mobileNavChat = document.getElementById('mobile-nav-chat');
     const mobileNavArchive = document.getElementById('mobile-nav-archive');
-    
     let history = [];
-    let currentMobileView = 'chat';
+    let currentMobileTab = 'chat';
 
     // 检测是否为移动端
     function isMobile() {
@@ -840,7 +862,7 @@
         }
     }
 
-    // 桌面端：显示聊天视图
+    // 显示聊天视图
     function showChat() {
         chatView.style.display = 'flex';
         readerView.style.display = 'none';
@@ -848,51 +870,60 @@
         document.querySelectorAll('.file-item').forEach(item => {
             item.classList.remove('active');
         });
+        
+        // 移动端同步切换
+        if (isMobile()) {
+            switchMobileTab('chat');
+        }
     }
 
-    // 桌面端：显示阅读视图
+    // 移动端切换标签
+    function switchMobileTab(tab) {
+        currentMobileTab = tab;
+        
+        if (tab === 'chat') {
+            chatView.style.display = 'flex';
+            mobileArchiveView.style.display = 'none';
+            mobileNavChat.classList.add('active');
+            mobileNavArchive.classList.remove('active');
+        } else {
+            chatView.style.display = 'none';
+            mobileArchiveView.style.display = 'flex';
+            mobileNavChat.classList.remove('active');
+            mobileNavArchive.classList.add('active');
+            loadMobileFiles();
+        }
+    }
+
+    // 显示阅读视图
     function showReader(filename) {
+        if (isMobile()) {
+            // 移动端使用全屏阅读视图
+            showMobileReader(filename);
+            return;
+        }
+        
+        // 桌面端原有逻辑
         chatView.style.display = 'none';
         readerView.style.display = 'flex';
         navChat.classList.remove('active');
         document.querySelectorAll('.file-item').forEach(item => {
             item.classList.remove('active');
         });
-        if (event && event.target) {
-            event.target.classList.add('active');
-        }
+        event.target.classList.add('active');
         
         document.getElementById('reader-title').innerText = '📄 ' + filename.replace('.md', '');
         loadFileContent(filename);
     }
 
-    // 移动端：显示聊天视图
-    function showMobileChat() {
-        currentMobileView = 'chat';
-        mobileChatView.style.display = 'flex';
-        mobileArchiveView.style.display = 'none';
-        mobileNavChat.classList.add('active');
-        mobileNavArchive.classList.remove('active');
-    }
-
-    // 移动端：显示档案视图
-    function showMobileArchive() {
-        currentMobileView = 'archive';
-        mobileChatView.style.display = 'none';
-        mobileArchiveView.style.display = 'flex';
-        mobileNavChat.classList.remove('active');
-        mobileNavArchive.classList.add('active');
-        loadMobileFiles();
-    }
-
-    // 移动端：打开阅读视图
-    function openMobileReader(filename) {
+    // 移动端显示阅读视图
+    function showMobileReader(filename) {
         mobileReaderView.style.display = 'flex';
         document.getElementById('mobile-reader-title').innerText = '📄 ' + filename.replace('.md', '');
         loadMobileFileContent(filename);
     }
 
-    // 移动端：关闭阅读视图
+    // 关闭移动端阅读视图
     function closeMobileReader() {
         mobileReaderView.style.display = 'none';
     }
@@ -997,81 +1028,63 @@
         try {
             const res = await fetch('/files');
             const files = await res.json();
-            const list = document.getElementById('mobile-archive-list');
+            const content = document.getElementById('mobile-archive-content');
             
             if (files.length === 0) {
-                list.innerHTML = '<div class="empty-state">暂无记录</div>';
+                content.innerHTML = '<div class="empty-state">暂无记录</div>';
                 return;
             }
-            
-            list.innerHTML = '';
             
             const pinnedFiles = ['profile.md', 'memory.md'];
             const diaryFiles = files.filter(f => !pinnedFiles.includes(f) && !f.includes('_draft'));
             const draftFiles = files.filter(f => f.includes('_draft'));
-
-            // 置顶文件分类
-            if (pinnedFiles.some(f => files.includes(f))) {
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'archive-category';
-                categoryDiv.innerHTML = '<div class="archive-category-title">📌 重要档案</div>';
-                const itemsDiv = document.createElement('div');
-                itemsDiv.className = 'archive-items';
-                
-                pinnedFiles.forEach(filename => {
-                    if (files.includes(filename)) {
-                        const div = document.createElement('div');
-                        div.className = 'archive-item pinned';
-                        const icon = filename === 'profile.md' ? '👤' : '🧠';
-                        const label = filename === 'profile.md' ? '个人档案' : '长期记忆';
-                        div.innerHTML = `${icon} ${label}`;
-                        div.onclick = () => openMobileReader(filename);
-                        itemsDiv.appendChild(div);
-                    }
-                });
-                categoryDiv.appendChild(itemsDiv);
-                list.appendChild(categoryDiv);
-            }
-
-            // 草稿文件分类
+            
+            let html = '';
+            
+            // 重要档案区域
+            html += '<div class="mobile-section">';
+            html += '<div class="mobile-section-title">📌 重要档案</div>';
+            pinnedFiles.forEach(filename => {
+                if (files.includes(filename)) {
+                    const icon = filename === 'profile.md' ? '👤' : '🧠';
+                    const label = filename === 'profile.md' ? '个人档案' : '长期记忆';
+                    html += `<div class="mobile-file-item pinned" onclick="showMobileReader('${filename}')">
+                        <span class="file-icon">${icon}</span>
+                        <span class="file-name">${label}</span>
+                    </div>`;
+                }
+            });
+            html += '</div>';
+            
+            // 今日草稿区域
             if (draftFiles.length > 0) {
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'archive-category';
-                categoryDiv.innerHTML = '<div class="archive-category-title">📝 今日草稿</div>';
-                const itemsDiv = document.createElement('div');
-                itemsDiv.className = 'archive-items';
-                
+                html += '<div class="mobile-section">';
+                html += '<div class="mobile-section-title">📝 今日草稿</div>';
                 draftFiles.forEach(f => {
-                    const div = document.createElement('div');
-                    div.className = 'archive-item draft';
-                    div.innerHTML = `📝 ${f.replace('.md', '').replace('diary_', '')}`;
-                    div.onclick = () => openMobileReader(f);
-                    itemsDiv.appendChild(div);
+                    html += `<div class="mobile-file-item" onclick="showMobileReader('${f}')">
+                        <span class="file-icon">📝</span>
+                        <span class="file-name">${f.replace('.md', '').replace('diary_', '')}</span>
+                    </div>`;
                 });
-                categoryDiv.appendChild(itemsDiv);
-                list.appendChild(categoryDiv);
+                html += '</div>';
             }
-
-            // 日记文件分类
+            
+            // 历史日记区域
             if (diaryFiles.length > 0) {
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'archive-category';
-                categoryDiv.innerHTML = '<div class="archive-category-title">📚 历史日记</div>';
-                const itemsDiv = document.createElement('div');
-                itemsDiv.className = 'archive-items';
-                
+                html += '<div class="mobile-section">';
+                html += '<div class="mobile-section-title">📚 历史日记</div>';
                 diaryFiles.forEach(f => {
-                    const div = document.createElement('div');
-                    div.className = 'archive-item';
-                    div.innerHTML = `📓 ${f.replace('.md', '').replace('diary_', '')}`;
-                    div.onclick = () => openMobileReader(f);
-                    itemsDiv.appendChild(div);
+                    html += `<div class="mobile-file-item" onclick="showMobileReader('${f}')">
+                        <span class="file-icon">📓</span>
+                        <span class="file-name">${f.replace('.md', '').replace('diary_', '')}</span>
+                    </div>`;
                 });
-                categoryDiv.appendChild(itemsDiv);
-                list.appendChild(categoryDiv);
+                html += '</div>';
             }
+            
+            content.innerHTML = html;
         } catch (e) {
-            document.getElementById('mobile-archive-list').innerHTML = '<div class="empty-state">加载失败</div>';
+            document.getElementById('mobile-archive-content').innerHTML = '<div class="empty-state">加载失败</div>';
         }
     }
 
@@ -1079,34 +1092,28 @@
         const div = document.createElement('div');
         div.className = `message ${role}`;
         div.innerHTML = text.replace(/\n/g, '<br>');
-        
-        // 根据当前是移动端还是桌面端，向正确的聊天框添加消息
-        const targetChatBox = isMobile() ? document.querySelector('#mobile-chat-view #chat-box') : chatBox;
-        targetChatBox.appendChild(div);
-        targetChatBox.scrollTop = targetChatBox.scrollHeight;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     async function sendMessage() {
-        const inputEl = isMobile() ? document.getElementById('mobile-user-input') : userInput;
-        const btnEl = isMobile() ? document.getElementById('mobile-send-btn') : sendBtn;
-        
-        const text = inputEl.value.trim();
+        const text = userInput.value.trim();
         if (!text) return;
 
         appendMessage('user', text);
-        inputEl.value = '';
-        inputEl.style.height = 'auto';
-        btnEl.disabled = true;
+        userInput.value = '';
+        userInput.style.height = 'auto';
+        sendBtn.disabled = true;
 
         history.push({ role: "user", content: text });
 
+        // 显示正在输入的动画
         const typingDiv = document.createElement('div');
         typingDiv.className = 'message buddy typing';
         typingDiv.id = 'typing-indicator';
         typingDiv.innerHTML = '<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>';
-        const targetChatBox = isMobile() ? document.querySelector('#mobile-chat-view #chat-box') : chatBox;
-        targetChatBox.appendChild(typingDiv);
-        targetChatBox.scrollTop = targetChatBox.scrollHeight;
+        chatBox.appendChild(typingDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
 
         try {
             const res = await fetch('/chat', {
@@ -1116,73 +1123,64 @@
             });
             const data = await res.json();
 
+            // 移除正在输入动画
             const typingEl = document.getElementById('typing-indicator');
             if (typingEl) typingEl.remove();
 
             appendMessage('buddy', data.reply);
 
-            const targetChatBox = isMobile() ? document.querySelector('#mobile-chat-view #chat-box') : chatBox;
-
+            // 显示自动归档通知
             if (data.auto_archived && data.auto_archived.length > 0) {
                 data.auto_archived.forEach(archived => {
                     const note = document.createElement('div');
                     note.className = 'system-note';
                     note.innerText = `✨ 已自动归档 ${archived.old_draft.replace('_draft.md', '')}`;
-                    targetChatBox.appendChild(note);
+                    chatBox.appendChild(note);
                 });
             }
 
-            // 显示token消耗信息
-            if (data.tokens) {
-                const tokenNote = document.createElement('div');
-                tokenNote.className = 'system-note';
-                tokenNote.style.fontSize = '0.7rem';
-                tokenNote.style.opacity = '0.8';
-                tokenNote.innerText = `◉ 本次运算消耗 ${data.tokens.total} tokens (输入: ${data.tokens.input}, 输出: ${data.tokens.output})`;
-                targetChatBox.appendChild(tokenNote);
-            }
-
+            // 显示已记录提示
             const note = document.createElement('div');
             note.className = 'system-note';
-            note.innerText = `◉ MOSS 已记下`;
-            targetChatBox.appendChild(note);
-            targetChatBox.scrollTop = targetChatBox.scrollHeight;
+            note.innerText = `✨ Buddy 已记下～`;
+            chatBox.appendChild(note);
             loadFiles();
 
             history.push({ role: "assistant", content: data.reply });
         } catch (e) {
+            // 移除正在输入动画
             const typingEl = document.getElementById('typing-indicator');
             if (typingEl) typingEl.remove();
             
             appendMessage('buddy', '哎呀，网络开小差了，请稍后再试。');
             console.error(e);
         } finally {
-            btnEl.disabled = false;
-            inputEl.focus();
+            sendBtn.disabled = false;
+            userInput.focus();
         }
     }
 
     loadFiles();
 
+    // 完成今日记录
     async function completeToday() {
         if (history.length === 0) {
             alert('今天还没有聊天记录，无法完成记录');
             return;
         }
 
-        const sendBtnEl = isMobile() ? document.getElementById('mobile-send-btn') : sendBtn;
-        const completeBtnEl = isMobile() ? document.getElementById('mobile-complete-btn') : document.getElementById('complete-btn');
-        
-        sendBtnEl.disabled = true;
-        completeBtnEl.disabled = true;
+        const sendBtn = document.getElementById('send-btn');
+        const completeBtn = document.getElementById('complete-btn');
+        sendBtn.disabled = true;
+        completeBtn.disabled = true;
 
+        // 显示加载提示
         const loadingNote = document.createElement('div');
         loadingNote.className = 'system-note';
         loadingNote.id = 'archive-loading';
         loadingNote.innerText = '📝 正在整理今日记录...';
-        const targetChatBox = isMobile() ? document.querySelector('#mobile-chat-view #chat-box') : chatBox;
-        targetChatBox.appendChild(loadingNote);
-        targetChatBox.scrollTop = targetChatBox.scrollHeight;
+        chatBox.appendChild(loadingNote);
+        chatBox.scrollTop = chatBox.scrollHeight;
 
         try {
             const res = await fetch('/archive', {
@@ -1193,6 +1191,7 @@
             
             const data = await res.json();
             
+            // 移除加载提示
             const loadingEl = document.getElementById('archive-loading');
             if (loadingEl) loadingEl.remove();
 
@@ -1216,14 +1215,15 @@
                 alert('归档失败，请稍后再试');
             }
         } catch (e) {
+            // 移除加载提示
             const loadingEl = document.getElementById('archive-loading');
             if (loadingEl) loadingEl.remove();
             
             console.error(e);
             alert('网络错误，请稍后再试');
         } finally {
-            sendBtnEl.disabled = false;
-            completeBtnEl.disabled = false;
+            sendBtn.disabled = false;
+            completeBtn.disabled = false;
         }
     }
 
@@ -1236,15 +1236,14 @@
         
         const note = document.createElement('div');
         note.className = 'system-note';
-        note.innerText = '◉ 数据归档完成';
-        const targetChatBox = isMobile() ? document.querySelector('#mobile-chat-view #chat-box') : chatBox;
-        targetChatBox.appendChild(note);
-        targetChatBox.scrollTop = targetChatBox.scrollHeight;
+        note.innerText = '✨ 今日记录已完成归档！';
+        chatBox.appendChild(note);
+        chatBox.scrollTop = chatBox.scrollHeight;
         
         loadFiles();
     }
 
-    // 监听窗口大小变化
+    // 监听窗口大小变化，处理横竖屏切换
     window.addEventListener('resize', () => {
         if (!isMobile() && mobileReaderView.style.display === 'flex') {
             mobileReaderView.style.display = 'none';
