@@ -1,4 +1,5 @@
 import json
+import datetime
 from typing import Dict, Any, Optional
 from src.utils.file_utils import (
     load_memory, 
@@ -29,22 +30,36 @@ class ChatService:
         profile_info = extract_profile_without_persona()
         memory = load_memory()
         recent_diaries = load_recent_diaries()
-        
-        recent_diaries_text = "\n---\n".join(recent_diaries[:7]) if recent_diaries else '刚认识不久'
-        
-        system_prompt = f"""{persona if persona else '你是 Buddy,一个陪用户聊每天日常的老朋友。'}
+
+        recent_diaries_text = "\n\n".join(recent_diaries[:7]) if recent_diaries else '刚认识不久'
+
+        # 获取当前日期和星期
+        now = datetime.datetime.now()
+        weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+        weekday = weekdays[now.weekday()]
+        date_str = now.strftime('%Y-%m-%d')
+        time_str = now.strftime('%H:%M:%S')
+
+        system_prompt = f"""【系统状态】
+当前日期：{date_str} {weekday}
+当前时间：{time_str}
+
+{persona if persona else '你是 Buddy,一个陪用户聊每天日常的老朋友。'}
 
 【记住的事】
 {memory if memory else '暂时还不了解太多'}
 
 【最近聊的】
+每段对话标注了日期，【今天】表示当天已发生的对话。
+
 {recent_diaries_text}
 
 【用户档案】
 {profile_info if profile_info else '慢慢了解中'}
 
-输出JSON格式：{{"reply": "你的回复"}}"""
-        
+【输出格式】
+必须返回JSON：{{"reply": "你的回复"}}"""
+
         return system_prompt
     
     def generate_response(self, content: str, history: list) -> Dict[str, Any]:
@@ -64,7 +79,8 @@ class ChatService:
             api_key=dashscope.api_key,
             model=self.model,
             messages=messages,
-            result_format="message"
+            result_format="message",
+            enable_search=False
         )
         
         if response.status_code == 200:

@@ -56,11 +56,53 @@ def load_memory():
     return _load_md_file("memory.md")
 
 
+def _extract_date_from_archive(filename: str) -> str:
+    """从归档文件名提取日期"""
+    match = re.search(r'diary_(\d{4}-\d{2}-\d{2})_\d+\.md', filename)
+    if match:
+        return match.group(1)
+    return ""
+
+
+def _extract_conversation_from_archive(content: str) -> str:
+    """从归档文件内容提取对话记录部分"""
+    match = re.search(r'## 对话记录\s*\n(.*?)(?=\n## |\Z)', content, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return ""
+
+
+def _sort_diary_files(filename: str):
+    """日记文件排序键：按日期和索引排序"""
+    match = re.search(r'diary_(\d{4}-\d{2}-\d{2})_(\d+)\.md', filename)
+    if match:
+        date_str, idx = match.groups()
+        return (date_str, int(idx))
+    return ("", 0)
+
+
 def load_recent_diaries():
-    """加载最近日记文件内容（包含草稿）"""
-    diary_files = [f for f in os.listdir(DATA_DIR) if f.startswith("diary_") and f.endswith('.md')]
-    diary_files.sort(reverse=True)
-    return [_load_md_file(f) for f in diary_files[:7]]
+    """加载最近日记的对话记录（带日期标注）"""
+    today = datetime.date.today().isoformat()
+    diary_files = [f for f in os.listdir(DATA_DIR)
+                   if f.startswith("diary_") and f.endswith('.md') and '_draft' not in f]
+    diary_files.sort(key=_sort_diary_files, reverse=True)
+
+    conversations = []
+    for filename in diary_files[:7]:
+        content = _load_md_file(filename)
+        date_str = _extract_date_from_archive(filename)
+        conversation = _extract_conversation_from_archive(content)
+
+        if conversation:
+            # 如果是今天的对话，特殊标注
+            if date_str == today:
+                header = f"【今天】"
+            else:
+                header = f"【{date_str}】"
+            conversations.append(f"{header}\n{conversation}")
+
+    return conversations
 
 
 def get_today_draft_file():
@@ -95,7 +137,7 @@ def _get_next_diary_index(date_str: str) -> int:
     return len(diary_files) + 1
 
 
-def _write_diary_file(filepath: str, date_str: str, idx: int, structured_data: dict, 
+def _write_diary_file(filepath: str, date_str: str, idx: int, structured_data: dict,
                       conversation: list, diary_article: str):
     """通用：写入日记文件"""
     with open(filepath, "w", encoding="utf-8") as f:
@@ -106,7 +148,12 @@ def _write_diary_file(filepath: str, date_str: str, idx: int, structured_data: d
         f.write("\n```\n\n## 对话记录\n")
         for msg in conversation:
             role = "用户" if msg["role"] == "user" else "Buddy"
-            f.write(f"**{role}**: {msg['content']}\n\n")
+            # 保留时间戳（如果有）
+            time_str = msg.get("time", "")
+            if time_str:
+                f.write(f"**[{time_str}] {role}**: {msg['content']}\n\n")
+            else:
+                f.write(f"**{role}**: {msg['content']}\n\n")
         f.write(f"## 日记文章\n{diary_article}\n\n---\n")
 
 
@@ -157,18 +204,22 @@ def _parse_draft_date(filename: str):
 
 
 def _extract_conversation_from_draft(content: str) -> list:
-    """从草稿内容提取对话记录"""
+    """从草稿内容提取对话记录（保留时间戳）"""
     conversation = []
     user_msg = None
+    user_time = None
     for line in content.split('\n'):
-        user_match = re.search(r'\*\*\[\d{2}:\d{2}:\d{2}\] 用户\*\*: (.+)', line)
-        buddy_match = re.search(r'\*\*\[\d{2}:\d{2}:\d{2}\] Buddy\*\*: (.+)', line)
+        user_match = re.search(r'\*\*\[(\d{2}:\d{2}:\d{2})\] 用户\*\*: (.+)', line)
+        buddy_match = re.search(r'\*\*\[(\d{2}:\d{2}:\d{2})\] Buddy\*\*: (.+)', line)
         if user_match:
-            user_msg = user_match.group(1)
+            user_time = user_match.group(1)
+            user_msg = user_match.group(2)
         elif buddy_match and user_msg:
-            conversation.append({"role": "user", "content": user_msg})
-            conversation.append({"role": "assistant", "content": buddy_match.group(1)})
+            buddy_time = buddy_match.group(1)
+            conversation.append({"role": "user", "content": user_msg, "time": user_time})
+            conversation.append({"role": "assistant", "content": buddy_match.group(2), "time": buddy_time})
             user_msg = None
+            user_time = None
     return conversation
 
 

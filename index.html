@@ -573,7 +573,36 @@
             border-radius: 12px;
             border-left: 4px solid #fd79a8;
         }
-        
+
+        /* 日记预览样式 */
+        .diary-section {
+            margin: 16px 0;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 3px solid #74b9ff;
+        }
+
+        .diary-section.diary-evaluation {
+            background: #f0fff4;
+            border-left-color: #00b894;
+        }
+
+        .diary-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #636e72;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .diary-content {
+            color: #2d3436;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
         .btn-cancel {
             padding: 12px 24px;
             background: #dfe6e9;
@@ -1165,11 +1194,6 @@
     loadFiles();
 
     async function completeToday() {
-        if (history.length === 0) {
-            alert('今天还没有聊天记录，无法完成记录');
-            return;
-        }
-
         const sendBtnEl = isMobile() ? document.getElementById('mobile-send-btn') : sendBtn;
         const completeBtnEl = isMobile() ? document.getElementById('mobile-complete-btn') : document.getElementById('complete-btn');
         
@@ -1200,7 +1224,7 @@
                 const modal = document.getElementById('archive-modal');
                 const structuredData = document.getElementById('structured-data');
                 const diaryPreview = document.getElementById('diary-preview');
-                
+
                 structuredData.innerHTML = `
                     <h3>📊 结构化信息</h3>
                     <p><strong>📍 事件:</strong> ${data.structured_data.events.join(', ') || '无'}</p>
@@ -1208,10 +1232,32 @@
                     <p><strong>💭 情绪:</strong> ${data.structured_data.emotions.join(', ') || '无'}</p>
                     <p><strong>💡 想法:</strong> ${data.structured_data.ideas.join(', ') || '无'}</p>
                 `;
+
+                // 解析日记文章，分离【今日概览】和【AI评价】
+                const article = data.diary_article || '';
+                const overviewMatch = article.match(/【今日概览】\s*([\s\S]*?)(?=【AI评价】|$)/);
+                const evaluationMatch = article.match(/【AI评价】\s*([\s\S]*?)$/);
                 
-                diaryPreview.innerHTML = `<h3>📝 日记预览</h3><p>${data.diary_article}</p>`;
+                const overview = overviewMatch ? overviewMatch[1].trim() : article;
+                const evaluation = evaluationMatch ? evaluationMatch[1].trim() : '';
                 
+                diaryPreview.innerHTML = `
+                    <h3>📝 日记预览</h3>
+                    <div class="diary-section">
+                        <div class="diary-label">📋 今日概览</div>
+                        <div class="diary-content">${overview}</div>
+                    </div>
+                    ${evaluation ? `
+                    <div class="diary-section diary-evaluation">
+                        <div class="diary-label">💡 AI评价</div>
+                        <div class="diary-content">${evaluation}</div>
+                    </div>
+                    ` : ''}
+                `;
+
                 modal.style.display = 'block';
+            } else if (data.error) {
+                alert(data.error);
             } else {
                 alert('归档失败，请稍后再试');
             }

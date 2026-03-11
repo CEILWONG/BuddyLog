@@ -8,6 +8,7 @@ import dashscope
 # 加载配置
 load_dotenv()
 dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
+dashscope.base_http_api_url = "https://dashscope.aliyuncs.com/api/v1"
 MODEL = os.getenv("MODEL_NAME", "qwen-plus")
 
 # 导入模块
