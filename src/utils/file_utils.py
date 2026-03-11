@@ -65,18 +65,33 @@ def _extract_date_from_archive(filename: str) -> str:
 
 
 def _extract_conversation_from_archive(content: str) -> str:
-    """从归档文件内容提取对话记录部分"""
+    """从归档文件内容提取用户对话记录（只保留用户消息，去掉MOSS回复）"""
     match = re.search(r'## 对话记录\s*\n(.*?)(?=\n## |\Z)', content, re.DOTALL)
     if match:
-        return match.group(1).strip()
+        conversation = match.group(1).strip()
+        # 只保留用户消息（以**用户**:开头的行）
+        user_lines = []
+        for line in conversation.split('\n'):
+            if line.strip().startswith('**用户**:'):
+                # 去掉前缀，只保留内容
+                user_content = line.strip().replace('**用户**:', '').strip()
+                user_lines.append(user_content)
+        return '\n'.join(user_lines)
     return ""
 
 
 def _sort_diary_files(filename: str):
-    """日记文件排序键：按日期和索引排序"""
-    match = re.search(r'diary_(\d{4}-\d{2}-\d{2})_(\d+)\.md', filename)
-    if match:
-        date_str, idx = match.groups()
+    """日记文件排序键：按日期和索引排序，草稿文件排在最前"""
+    # 草稿文件：diary_YYYY-MM-DD_draft.md
+    draft_match = re.search(r'diary_(\d{4}-\d{2}-\d{2})_draft\.md', filename)
+    if draft_match:
+        date_str = draft_match.group(1)
+        return (date_str, 999)  # 草稿用最大索引，确保排在当天最前
+    
+    # 归档文件：diary_YYYY-MM-DD_N.md
+    archive_match = re.search(r'diary_(\d{4}-\d{2}-\d{2})_(\d+)\.md', filename)
+    if archive_match:
+        date_str, idx = archive_match.groups()
         return (date_str, int(idx))
     return ("", 0)
 
@@ -85,7 +100,7 @@ def load_recent_diaries():
     """加载最近日记的对话记录（带日期标注）"""
     today = datetime.date.today().isoformat()
     diary_files = [f for f in os.listdir(DATA_DIR)
-                   if f.startswith("diary_") and f.endswith('.md') and '_draft' not in f]
+                   if f.startswith("diary_") and f.endswith('.md')]
     diary_files.sort(key=_sort_diary_files, reverse=True)
 
     conversations = []

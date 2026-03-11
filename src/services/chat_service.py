@@ -44,7 +44,7 @@ class ChatService:
 当前日期：{date_str} {weekday}
 当前时间：{time_str}
 
-{persona if persona else '你是 Buddy,一个陪用户聊每天日常的老朋友。'}
+{persona if persona else '你是 Moss,一个陪用户聊每天日常的老朋友。'}
 
 【记住的事】
 {memory if memory else '暂时还不了解太多'}
@@ -57,8 +57,21 @@ class ChatService:
 【用户档案】
 {profile_info if profile_info else '慢慢了解中'}
 
-【输出格式】
-必须返回JSON：{{"reply": "你的回复"}}"""
+【输出格式 - 严格遵守】
+1. 必须且只能返回 JSON 格式：{{"reply": "你的回复内容"}}
+2. 不要添加 Markdown 代码块标记（如 ```json）
+3. 不要添加任何前缀或后缀文字
+4. 不要添加系统状态信息
+5. 示例：{{"reply": "子豪大人，我在。"}}
+6. 违规示例 ❌：```json{{"reply": "你好"}}``` 或 系统时间同步至...{{"reply": "你好"}}
+7. 正确示例 ✅：{{"reply": "你好"}}
+
+【绝对禁止 - 违者重罚】
+- 禁止编造任何数字：包括但不限于"间隔X秒"、"频率X%"、"持续X分钟"、"下降X%"、"约X个月"等所有无法验证的精确数据
+- 禁止虚假分析：如"检测到重复提问"、"符合人类行为模式"、"根据历史数据"等AI式过度解读
+- 禁止学术腔：如"结论"、"综上所述"、"数据表明"、"研究显示"等论文用语
+- 禁止扮演分析师：你不是在做数据分析，是在和朋友闲聊
+- 如果不确定具体数据，只说定性结论（如"有一段时间了"、"比上次久"），绝不用数字"""
 
         return system_prompt
     
@@ -67,10 +80,11 @@ class ChatService:
         # 构建系统提示
         system_prompt = self.build_system_prompt()
         
-        # 构建消息数组，确保每个消息都有content字段
+        # 构建消息数组，保留完整对话历史（让MOSS理解上下文逻辑）
+        valid_history = [msg for msg in history if msg.get("content")]
         messages = [
             {"role": "system", "content": system_prompt},
-            *[msg for msg in history if msg.get("content")],  # 过滤掉没有content字段的消息
+            *valid_history[-10:],  # 最近10轮对话
             {"role": "user", "content": content}
         ]
         
@@ -86,8 +100,20 @@ class ChatService:
         if response.status_code == 200:
             # 提取回复内容
             content = response.output.choices[0].message.content
+            # 清理可能的 Markdown 代码块标记
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
             # 解析 JSON 响应
-            result = json.loads(content)
+            try:
+                result = json.loads(content)
+            except json.JSONDecodeError:
+                # 如果解析失败，将内容包装为 reply 字段
+                result = {"reply": content}
             
             # 获取 token 使用量
             usage = response.usage if hasattr(response, 'usage') else None
