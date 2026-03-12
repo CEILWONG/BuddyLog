@@ -47,7 +47,8 @@ class ArchiveService:
             model=self.model,
             messages=extraction_messages,
             result_format="message",
-            enable_search=False
+            enable_search=False,
+            enable_thinking=False
         )
         
         if extraction_response.status_code != 200:
@@ -94,7 +95,8 @@ class ArchiveService:
             model=self.model,
             messages=article_messages,
             result_format="message",
-            enable_search=False
+            enable_search=False,
+            enable_thinking=False
         )
 
         if article_response.status_code != 200:

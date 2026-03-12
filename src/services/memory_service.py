@@ -36,7 +36,8 @@ class MemoryService:
 3. 提炼：提取重要信息，保持记忆简洁
 4. 保留：保留未完结的事项
 5. 格式：保持原有的Markdown格式
-6. 时效：注意对话日期{date_str}，这是最新信息"""
+6. 时效：注意对话日期{date_str}，这是最新信息
+7. 【重要事件处理】重要事件按时间顺序记录，已有事件严禁修改或删除，仅追加当天新发生的事件，确保时间线准确无误"""
         
         memory_messages = [
             {"role": "system", "content": memory_prompt}
@@ -47,7 +48,8 @@ class MemoryService:
             model=self.model,
             messages=memory_messages,
             result_format="message",
-            enable_search=False
+            enable_search=False,
+            enable_thinking=False
         )
         
         if memory_response.status_code == 200:

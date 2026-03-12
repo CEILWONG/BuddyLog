@@ -54,7 +54,7 @@ class ChatService:
 
 {recent_diaries_text}
 
-【用户档案】
+【你的档案】
 {profile_info if profile_info else '慢慢了解中'}
 
 【输出格式 - 严格遵守】
@@ -94,7 +94,8 @@ class ChatService:
             model=self.model,
             messages=messages,
             result_format="message",
-            enable_search=False
+            enable_search=False,
+            enable_thinking=False
         )
         
         if response.status_code == 200:
