@@ -1165,11 +1165,6 @@
     loadFiles();
 
     async function completeToday() {
-        if (history.length === 0) {
-            alert('今天还没有聊天记录，无法完成记录');
-            return;
-        }
-
         const sendBtnEl = isMobile() ? document.getElementById('mobile-send-btn') : sendBtn;
         const completeBtnEl = isMobile() ? document.getElementById('mobile-complete-btn') : document.getElementById('complete-btn');
         
