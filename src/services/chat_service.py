@@ -57,6 +57,8 @@ class ChatService:
 【你的档案】
 {profile_info if profile_info else '慢慢了解中'}
 
+如果用户是问一个问题，你要认真思考，分析最近聊的内容，并结合日期精准的掌握计算时间线，再给出回答。
+
 【输出格式 - 严格遵守】
 1. 必须且只能返回 JSON 格式：{{"reply": "你的回复内容"}}
 2. 不要添加 Markdown 代码块标记（如 ```json）
