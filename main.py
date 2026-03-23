@@ -70,7 +70,14 @@ async def get_file(filename: str):
     filepath = get_diary_file_path(filename)
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(filepath, media_type="text/markdown")
+
+    # 添加禁用缓存的响应头，确保文件内容实时更新
+    headers = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+    return FileResponse(filepath, media_type="text/markdown", headers=headers)
 
 
 @app.post("/archive")
