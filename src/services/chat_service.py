@@ -1,6 +1,7 @@
 import json
 import datetime
 from typing import Dict, Any, Optional
+from concurrent.futures import ThreadPoolExecutor
 from src.utils.file_utils import (
     load_memory, 
     load_recent_diaries, 
@@ -19,6 +20,8 @@ class ChatService:
     def __init__(self, model: str, archive_service=None):
         self.model = model
         self.archive_service = archive_service
+        # 后台归档线程池（单线程，确保顺序执行）
+        self._archive_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="archive_worker")
     
     def set_archive_service(self, archive_service):
         """设置归档服务（用于自动归档过期草稿）"""
@@ -134,14 +137,39 @@ class ChatService:
         else:
             raise Exception(f"API request failed: {response.message}")
     
-    def process_chat(self, content: str, history: list) -> Dict[str, Any]:
-        """处理聊天请求"""
-        # 1. 首先检查并自动归档过期草稿（如果存在且archive_service已设置）
-        auto_archived = []
-        if self.archive_service:
-            auto_archived = auto_archive_expired_drafts(self.archive_service)
+    def _background_archive(self):
+        """后台执行归档（不阻塞主流程）"""
+        try:
+            if self.archive_service:
+                auto_archive_expired_drafts(self.archive_service)
+                print("[Background] Auto-archive completed")
+        except Exception as e:
+            print(f"[Background] Auto-archive failed: {e}")
+    
+    def _has_expired_drafts(self) -> bool:
+        """检查是否存在过期草稿（非今天的草稿）"""
+        import os
+        from datetime import date
+        from src.utils.file_utils import DATA_DIR, _parse_draft_date
         
-        # 2. 生成响应（包含token使用量）
+        today = date.today()
+        for filename in os.listdir(DATA_DIR):
+            if filename.endswith('_draft.md'):
+                draft_date = _parse_draft_date(filename)
+                if draft_date and draft_date < today:
+                    return True
+        return False
+    
+    def process_chat(self, content: str, history: list) -> Dict[str, Any]:
+        """处理聊天请求（归档改为后台异步执行）"""
+        # 1. 检查是否存在过期草稿，并提交归档任务到后台（非阻塞）
+        archiving_notice = None
+        if self.archive_service:
+            if self._has_expired_drafts():
+                archiving_notice = "检测到有未归档draft日记，将在后台自动完成归档"
+            self._archive_executor.submit(self._background_archive)
+        
+        # 2. 立即生成响应（不等待归档完成）
         result = self.generate_response(content, history)
         
         reply_text = result.get("reply", "")
@@ -159,8 +187,8 @@ class ChatService:
             })
         }
         
-        # 4. 如果有自动归档的文件，添加到响应中
-        if auto_archived:
-            response["auto_archived"] = auto_archived
+        # 4. 如果有归档提示，添加到响应中
+        if archiving_notice:
+            response["archiving_notice"] = archiving_notice
         
         return response

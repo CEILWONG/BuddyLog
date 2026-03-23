@@ -32,6 +32,11 @@ class ArchiveService:
             "ideas": ["想法1", "想法2"]
         }
         
+        【提取原则】
+        1. 重点关注用户（user）的发言内容，这是用户自己的经历、想法和感受
+        2. AI（assistant）的回应仅作参考，用于理解上下文，但不要将AI的话作为用户的事件或想法提取
+        3. 从用户的发言中提炼真实发生的事件、提到的人物、表达的情绪、提出的想法
+        
         对话内容：
         """
         
@@ -123,7 +128,10 @@ class ArchiveService:
         else:
             date_str = datetime.date.today().isoformat()
         
-        structured_data = self.extract_structured_data(conversation)
+        # 注释掉结构化提取以加速归档（如需恢复，取消下面两行注释）
+        # structured_data = self.extract_structured_data(conversation)
+        structured_data = {"events": [], "people": [], "emotions": [], "ideas": []}
+        
         diary_article = self.generate_diary_article(conversation, date_str)
         
         filename = finalize_diary(structured_data, conversation, diary_article, 

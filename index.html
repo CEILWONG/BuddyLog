@@ -938,6 +938,7 @@
             .replace(/```json\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
             .replace(/```\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/^> (.*)$/gm, '<blockquote style="margin: 8px 0; padding: 8px 12px; border-left: 3px solid #fab1a0; background: #fff5f5; border-radius: 0 8px 8px 0;">$1</blockquote>')
             .replace(/\n/g, '<br>');
     }
 
@@ -1119,18 +1120,9 @@
             const typingEl = document.getElementById('typing-indicator');
             if (typingEl) typingEl.remove();
 
-            appendMessage('buddy', data.reply);
-
             const targetChatBox = isMobile() ? document.querySelector('#mobile-chat-view #chat-box') : chatBox;
 
-            if (data.auto_archived && data.auto_archived.length > 0) {
-                data.auto_archived.forEach(archived => {
-                    const note = document.createElement('div');
-                    note.className = 'system-note';
-                    note.innerText = `✨ 已自动归档 ${archived.old_draft.replace('_draft.md', '')}`;
-                    targetChatBox.appendChild(note);
-                });
-            }
+            appendMessage('buddy', data.reply);
 
             // 显示token消耗信息
             if (data.tokens) {
@@ -1146,6 +1138,17 @@
             note.className = 'system-note';
             note.innerText = `◉ MOSS 已记下`;
             targetChatBox.appendChild(note);
+
+            // 显示后台归档提示（放到最后）
+            if (data.archiving_notice) {
+                const archivingNote = document.createElement('div');
+                archivingNote.className = 'system-note';
+                archivingNote.style.fontStyle = 'italic';
+                archivingNote.style.opacity = '0.7';
+                archivingNote.innerText = `📝 ${data.archiving_notice}`;
+                targetChatBox.appendChild(archivingNote);
+            }
+
             targetChatBox.scrollTop = targetChatBox.scrollHeight;
             loadFiles();
 
@@ -1185,6 +1188,11 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ conversation: history })
             });
+            
+            // 检查HTTP响应状态
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
             
             const data = await res.json();
             

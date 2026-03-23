@@ -165,10 +165,18 @@ def _write_diary_file(filepath: str, date_str: str, idx: int, structured_data: d
             role = "用户" if msg["role"] == "user" else "Buddy"
             # 保留时间戳（如果有）
             time_str = msg.get("time", "")
-            if time_str:
-                f.write(f"**[{time_str}] {role}**: {msg['content']}\n\n")
+            if msg["role"] == "user":
+                # 用户内容：引用块 + emoji + 加粗，更醒目
+                if time_str:
+                    f.write(f"> 🙋 **[{time_str}] {role}**: **{msg['content']}**\n\n")
+                else:
+                    f.write(f"> 🙋 **{role}**: **{msg['content']}**\n\n")
             else:
-                f.write(f"**{role}**: {msg['content']}\n\n")
+                # Buddy内容：emoji + 普通格式
+                if time_str:
+                    f.write(f"🤖 **[{time_str}] {role}**: {msg['content']}\n\n")
+                else:
+                    f.write(f"🤖 **{role}**: {msg['content']}\n\n")
         f.write(f"## 日记文章\n{diary_article}\n\n---\n")
 
 
