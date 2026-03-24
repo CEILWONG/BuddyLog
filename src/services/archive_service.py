@@ -110,7 +110,8 @@ class ArchiveService:
         diary_article = article_response.output.choices[0].message.content
         return diary_article
     
-    def archive(self, conversation: list, draft_date: date = None, delete_draft: bool = False) -> Dict[str, Any]:
+    def archive(self, conversation: list, draft_date: date = None, delete_draft: bool = False,
+                user_email: str = None) -> Dict[str, Any]:
         """
         执行日记归档（通用函数，支持手动和自动归档）
         
@@ -118,6 +119,7 @@ class ArchiveService:
             conversation: 对话记录列表
             draft_date: 指定日期（None表示今天，用于自动归档）
             delete_draft: 是否删除草稿（手动归档时设为True）
+            user_email: 用户邮箱（可选，用于用户隔离）
         
         Returns:
             包含 filename, structured_data, diary_article 的字典
@@ -135,9 +137,10 @@ class ArchiveService:
         diary_article = self.generate_diary_article(conversation, date_str)
         
         filename = finalize_diary(structured_data, conversation, diary_article, 
-                                  draft_date=draft_date, delete_draft=delete_draft)
+                                  draft_date=draft_date, delete_draft=delete_draft,
+                                  user_email=user_email)
         
-        self.memory_service.update_memory(conversation, date_str)
+        self.memory_service.update_memory(conversation, date_str, user_email)
         
         return {
             "success": True,
@@ -146,12 +149,13 @@ class ArchiveService:
             "diary_article": diary_article
         }
     
-    def process_archive(self, conversation: list = None) -> Dict[str, Any]:
+    def process_archive(self, conversation: list = None, user_email: str = None) -> Dict[str, Any]:
         """手动归档今日（点击"完成今日"按钮）"""
         # 优先从草稿文件读取完整对话，确保不丢失任何消息
-        draft_path = get_today_draft_file()
-        if draft_path:
-            content = _load_md_file(os.path.basename(draft_path))
+        draft_path = get_today_draft_file(user_email)
+        if draft_path and os.path.exists(draft_path):
+            with open(draft_path, "r", encoding="utf-8") as f:
+                content = f.read()
             conversation = _extract_conversation_from_draft(content)
 
         # 如果草稿文件不存在或解析失败，使用传入的 conversation
@@ -161,8 +165,8 @@ class ArchiveService:
                 "error": "今天还没有聊天记录，无法完成记录"
             }
 
-        return self.archive(conversation, delete_draft=True)
+        return self.archive(conversation, delete_draft=True, user_email=user_email)
     
-    def auto_archive_from_draft(self, conversation: list, draft_date: date) -> Dict[str, Any]:
+    def auto_archive_from_draft(self, conversation: list, draft_date: date, user_email: str = None) -> Dict[str, Any]:
         """自动归档过期草稿（指定日期，由 auto_archive_expired_drafts 调用）"""
-        return self.archive(conversation, draft_date=draft_date, delete_draft=False)
+        return self.archive(conversation, draft_date=draft_date, delete_draft=False, user_email=user_email)

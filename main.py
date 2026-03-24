@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from dotenv import load_dotenv
@@ -13,9 +13,20 @@ MODEL = os.getenv("MODEL_NAME", "qwen-plus")
 
 # 导入模块
 from src.models.schemas import Message, ArchiveRequest
+from src.models.auth_schemas import (
+    UserRegister, UserLogin, TokenResponse, UserProfileResponse,
+    SettingsUpdateRequest
+)
 from src.services.chat_service import ChatService
 from src.services.archive_service import ArchiveService
+from src.services.auth_service import verify_password
 from src.utils.file_utils import ensure_data_dir, list_diary_files, get_diary_file_path
+from src.utils.auth_utils import create_access_token, get_current_user
+from src.utils.user_utils import (
+    create_user, get_user_by_email, update_user_settings,
+    update_user_usage, check_user_limit, get_user_settings,
+    get_effective_daily_limit,
+)
 
 # 确保数据目录存在
 ensure_data_dir()
@@ -36,6 +47,100 @@ archive_service = ArchiveService(MODEL)
 chat_service = ChatService(MODEL, archive_service)
 
 
+# ==================== 认证路由 ====================
+
+@app.post("/auth/register", response_model=TokenResponse)
+async def register(user_data: UserRegister):
+    """用户注册"""
+    # 检查邮箱是否已存在
+    existing_user = get_user_by_email(user_data.email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="该邮箱已被注册")
+    
+    # 创建用户
+    user_info = create_user(user_data.email, user_data.password)
+    if not user_info:
+        raise HTTPException(status_code=500, detail="创建用户失败")
+    
+    # 生成Token
+    access_token = create_access_token(data={"sub": user_data.email})
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user_info["user_id"],
+        "email": user_data.email
+    }
+
+
+@app.post("/auth/login", response_model=TokenResponse)
+async def login(user_data: UserLogin):
+    """用户登录"""
+    # 获取用户信息
+    user_info = get_user_by_email(user_data.email)
+    if not user_info:
+        raise HTTPException(status_code=401, detail="邮箱或密码错误")
+    
+    # 验证密码
+    if not verify_password(user_data.password, user_info["password_hash"]):
+        raise HTTPException(status_code=401, detail="邮箱或密码错误")
+    
+    # 生成Token
+    access_token = create_access_token(data={"sub": user_data.email})
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user_info["user_id"],
+        "email": user_data.email
+    }
+
+
+@app.get("/auth/me", response_model=UserProfileResponse)
+async def get_me(current_email: str = Depends(get_current_user)):
+    """获取当前用户信息"""
+    user_info = get_user_by_email(current_email)
+    if not user_info:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    # 获取实际生效的每日限制
+    effective_limit = get_effective_daily_limit(current_email)
+    
+    return {
+        "email": current_email,
+        "user_id": user_info["user_id"],
+        "created_at": user_info["created_at"],
+        "settings": user_info.get("settings", {}),
+        "usage": user_info.get("usage", {}),
+        "effective_daily_limit": effective_limit
+    }
+
+
+@app.get("/auth/settings")
+async def get_settings(current_email: str = Depends(get_current_user)):
+    """获取用户设置"""
+    settings = get_user_settings(current_email)
+    return settings
+
+
+@app.put("/auth/settings")
+async def update_settings(
+    settings_update: SettingsUpdateRequest,
+    current_email: str = Depends(get_current_user)
+):
+    """更新用户设置"""
+    # 转换为字典，排除None值
+    settings_dict = settings_update.model_dump(exclude_unset=True)
+    
+    success = update_user_settings(current_email, settings_dict)
+    if not success:
+        raise HTTPException(status_code=500, detail="更新设置失败")
+    
+    return {"message": "设置已更新"}
+
+
+# ==================== 原有接口（增加用户认证） ====================
+
 @app.get("/")
 async def read_root():
     """根路径，返回前端页面"""
@@ -46,11 +151,25 @@ async def read_root():
 
 
 @app.post("/chat")
-async def chat(msg: Message):
+async def chat(msg: Message, current_email: str = Depends(get_current_user)):
     """聊天接口"""
     try:
-        result = chat_service.process_chat(msg.content, msg.history)
+        # 检查用户限制
+        limit_check = check_user_limit(current_email)
+        if not limit_check["allowed"]:
+            raise HTTPException(status_code=429, detail=limit_check["reason"])
+        
+        # 处理聊天
+        result = chat_service.process_chat(msg.content, msg.history, current_email)
+        
+        # 更新使用统计
+        tokens_data = result.get("tokens", {})
+        tokens_total = tokens_data.get("total", 0) if isinstance(tokens_data, dict) else tokens_data
+        update_user_usage(current_email, conversations_increment=1, tokens_increment=tokens_total)
+        
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error in chat: {str(e)}")
         import traceback
@@ -59,15 +178,15 @@ async def chat(msg: Message):
 
 
 @app.get("/files")
-async def list_files():
+async def list_files(current_email: str = Depends(get_current_user)):
     """获取已有的日记文件列表"""
-    return list_diary_files()
+    return list_diary_files(current_email)
 
 
 @app.get("/file/{filename}")
-async def get_file(filename: str):
+async def get_file(filename: str, current_email: str = Depends(get_current_user)):
     """读取具体某天的日记内容"""
-    filepath = get_diary_file_path(filename)
+    filepath = get_diary_file_path(filename, current_email)
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -81,10 +200,10 @@ async def get_file(filename: str):
 
 
 @app.post("/archive")
-async def archive_diary(req: ArchiveRequest):
+async def archive_diary(req: ArchiveRequest, current_email: str = Depends(get_current_user)):
     """手动触发日记归档"""
     try:
-        result = archive_service.process_archive(req.conversation)
+        result = archive_service.process_archive(req.conversation, current_email)
         return result
     except Exception as e:
         print(f"Error in archive: {str(e)}")

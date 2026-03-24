@@ -27,12 +27,12 @@ class ChatService:
         """设置归档服务（用于自动归档过期草稿）"""
         self.archive_service = archive_service
     
-    def build_system_prompt(self) -> str:
+    def build_system_prompt(self, user_email: str = None) -> str:
         """构建系统提示"""
-        persona = extract_agent_persona()
-        profile_info = extract_profile_without_persona()
-        memory = load_memory()
-        recent_diaries = load_recent_diaries()
+        persona = extract_agent_persona(user_email)
+        profile_info = extract_profile_without_persona(user_email)
+        memory = load_memory(user_email)
+        recent_diaries = load_recent_diaries(user_email)
 
         recent_diaries_text = "\n\n".join(recent_diaries[:7]) if recent_diaries else '刚认识不久'
 
@@ -80,10 +80,10 @@ class ChatService:
 
         return system_prompt
     
-    def generate_response(self, content: str, history: list) -> Dict[str, Any]:
+    def generate_response(self, content: str, history: list, user_email: str = None) -> Dict[str, Any]:
         """生成聊天响应"""
         # 构建系统提示
-        system_prompt = self.build_system_prompt()
+        system_prompt = self.build_system_prompt(user_email)
         
         # 构建消息数组，保留完整对话历史（让MOSS理解上下文逻辑）
         valid_history = [msg for msg in history if msg.get("content")]
@@ -137,45 +137,49 @@ class ChatService:
         else:
             raise Exception(f"API request failed: {response.message}")
     
-    def _background_archive(self):
+    def _background_archive(self, user_email: str = None):
         """后台执行归档（不阻塞主流程）"""
         try:
             if self.archive_service:
-                auto_archive_expired_drafts(self.archive_service)
-                print("[Background] Auto-archive completed")
+                auto_archive_expired_drafts(self.archive_service, user_email)
+                print(f"[Background] Auto-archive completed for user: {user_email}")
         except Exception as e:
-            print(f"[Background] Auto-archive failed: {e}")
+            print(f"[Background] Auto-archive failed for user {user_email}: {e}")
     
-    def _has_expired_drafts(self) -> bool:
+    def _has_expired_drafts(self, user_email: str = None) -> bool:
         """检查是否存在过期草稿（非今天的草稿）"""
         import os
         from datetime import date
-        from src.utils.file_utils import DATA_DIR, _parse_draft_date
+        from src.utils.file_utils import _get_diaries_dir, _parse_draft_date
+        
+        diaries_dir = _get_diaries_dir(user_email)
+        if not os.path.exists(diaries_dir):
+            return False
         
         today = date.today()
-        for filename in os.listdir(DATA_DIR):
+        for filename in os.listdir(diaries_dir):
             if filename.endswith('_draft.md'):
                 draft_date = _parse_draft_date(filename)
                 if draft_date and draft_date < today:
                     return True
         return False
     
-    def process_chat(self, content: str, history: list) -> Dict[str, Any]:
+    def process_chat(self, content: str, history: list, user_email: str = None) -> Dict[str, Any]:
         """处理聊天请求（归档改为后台异步执行）"""
         # 1. 检查是否存在过期草稿，并提交归档任务到后台（非阻塞）
         archiving_notice = None
         if self.archive_service:
-            if self._has_expired_drafts():
+            if self._has_expired_drafts(user_email):
                 archiving_notice = "检测到有未归档draft日记，将在后台自动完成归档"
-            self._archive_executor.submit(self._background_archive)
+            self._archive_executor.submit(self._background_archive, user_email)
         
         # 2. 立即生成响应（不等待归档完成）
-        result = self.generate_response(content, history)
+        result = self.generate_response(content, history, user_email)
         
         reply_text = result.get("reply", "")
         
         # 3. 追加到今天的草稿文件
-        filename = append_to_draft(content, reply_text)
+        filename = append_to_draft(content, reply_text, user_email)
         
         response = {
             "reply": reply_text,

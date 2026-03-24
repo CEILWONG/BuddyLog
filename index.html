@@ -9,6 +9,267 @@
         
         * { box-sizing: border-box; }
         
+        /* ==================== 认证页面样式 ==================== */
+        #auth-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 50%, #fd79a8 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .auth-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+        
+        .auth-card h2 {
+            margin: 0 0 10px 0;
+            color: #2d3436;
+            text-align: center;
+            font-size: 1.8rem;
+        }
+        
+        .auth-card .subtitle {
+            text-align: center;
+            color: #636e72;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+        
+        .auth-form .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .auth-form label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2d3436;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .auth-form input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #dfe6e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .auth-form input:focus {
+            outline: none;
+            border-color: #fd79a8;
+        }
+        
+        .auth-form .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        .auth-form .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(253, 121, 168, 0.4);
+        }
+        
+        .auth-form .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .auth-switch {
+            text-align: center;
+            margin-top: 20px;
+            color: #636e72;
+            font-size: 0.9rem;
+        }
+        
+        .auth-switch a {
+            color: #fd79a8;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .auth-switch a:hover {
+            text-decoration: underline;
+        }
+        
+        .auth-error {
+            background: #ff7675;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        
+        /* 用户信息区域 */
+        .user-info {
+            padding: 15px 20px;
+            border-top: 1px solid #f0f0f0;
+            background: #fafafa;
+        }
+        
+        .user-email {
+            font-size: 0.85rem;
+            color: #2d3436;
+            font-weight: 600;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .user-actions button {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-settings {
+            background: #dfe6e9;
+            color: #2d3436;
+        }
+        
+        .btn-settings:hover {
+            background: #b2bec3;
+        }
+        
+        .btn-logout {
+            background: #ff7675;
+            color: white;
+        }
+        
+        .btn-logout:hover {
+            background: #d63031;
+        }
+        
+        /* 设置弹窗 */
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .settings-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .settings-header h3 {
+            margin: 0;
+            color: #2d3436;
+        }
+        
+        .settings-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #636e72;
+        }
+        
+        .settings-section {
+            margin-bottom: 25px;
+        }
+        
+        .settings-section h4 {
+            margin: 0 0 15px 0;
+            color: #fd79a8;
+            font-size: 1rem;
+        }
+        
+        .settings-item {
+            margin-bottom: 15px;
+        }
+        
+        .settings-item label {
+            display: block;
+            margin-bottom: 5px;
+            color: #2d3436;
+            font-size: 0.9rem;
+        }
+        
+        .settings-item input,
+        .settings-item select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dfe6e9;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .settings-item .hint {
+            font-size: 0.8rem;
+            color: #636e72;
+            margin-top: 5px;
+        }
+        
+        .usage-stats {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .usage-stats p {
+            margin: 8px 0;
+            font-size: 0.9rem;
+            color: #2d3436;
+        }
+        
+        .usage-stats .stat-value {
+            font-weight: 600;
+            color: #fd79a8;
+        }
+        
         /* ==================== 桌面端布局 ==================== */
         body { 
             font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
@@ -172,6 +433,12 @@
             color: white;
             flex-shrink: 0;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #mobile-header .header-left {
+            flex: 1;
         }
         
         #mobile-header h1 {
@@ -186,6 +453,210 @@
             margin: 4px 0 0 0;
             font-size: 0.75rem;
             opacity: 0.9;
+        }
+        
+        #mobile-header .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        #mobile-user-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        
+        #mobile-user-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* 移动端用户菜单弹窗 */
+        #mobile-user-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 80px;
+        }
+        
+        #mobile-user-modal.active {
+            display: flex;
+        }
+        
+        .mobile-user-content {
+            background: white;
+            border-radius: 16px;
+            width: 92%;
+            max-width: 400px;
+            max-height: 85vh;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .mobile-user-body {
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .mobile-user-header {
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .mobile-user-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        
+        .mobile-user-header .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .user-email-row {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: #2d3436;
+            margin-bottom: 15px;
+            word-break: break-all;
+        }
+        
+        .user-actions-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .action-btn.settings {
+            background: #74b9ff;
+            color: white;
+        }
+        
+        .action-btn.logout {
+            background: #ff7675;
+            color: white;
+        }
+        
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* 移动端设置区域样式 */
+        .mobile-settings-section {
+            margin-bottom: 15px;
+        }
+        
+        .mobile-settings-section h4 {
+            margin: 0 0 10px 0;
+            font-size: 0.95rem;
+            color: #2d3436;
+            border-bottom: 1px solid #dfe6e9;
+            padding-bottom: 5px;
+        }
+        
+        .mobile-usage-stats {
+            background: #f8f9fa;
+            padding: 10px 12px;
+            border-radius: 8px;
+        }
+        
+        .mobile-usage-stats p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+            color: #636e72;
+        }
+        
+        .mobile-usage-stats span {
+            color: #2d3436;
+            font-weight: 600;
+        }
+        
+        .mobile-setting-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f2f6;
+        }
+        
+        .mobile-setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .mobile-setting-item label {
+            display: block;
+            font-size: 0.85rem;
+            color: #b2bec3;
+            margin-bottom: 3px;
+        }
+        
+        .mobile-setting-item p {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #2d3436;
+        }
+        
+        .mobile-logout-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            background: #ff7675;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .mobile-logout-btn:active {
+            transform: scale(0.98);
+            background: #ff5252;
         }
         
         /* 移动端主内容区 */
@@ -623,7 +1094,7 @@
             
             /* 显示移动端元素 */
             #mobile-header {
-                display: block;
+                display: flex;
             }
             
             #mobile-main {
@@ -687,6 +1158,83 @@
 </head>
 <body>
 
+<!-- 认证容器 -->
+<div id="auth-container">
+    <div class="auth-card">
+        <h2 id="auth-title">欢迎回来</h2>
+        <p class="subtitle" id="auth-subtitle">登录您的 MOSS 账号</p>
+        
+        <div class="auth-error" id="auth-error"></div>
+        
+        <form class="auth-form" id="auth-form">
+            <div class="form-group">
+                <label for="email">邮箱</label>
+                <input type="email" id="email" name="email" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" placeholder="至少6位字符" required minlength="6">
+            </div>
+            <button type="submit" class="btn-primary" id="auth-submit-btn">登录</button>
+        </form>
+        
+        <div class="auth-switch">
+            <span id="auth-switch-text">还没有账号？</span>
+            <a id="auth-switch-link">立即注册</a>
+        </div>
+    </div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="settings-modal" id="settings-modal">
+    <div class="settings-content">
+        <div class="settings-header">
+            <h3>⚙️ 用户设置</h3>
+            <button class="settings-close" onclick="closeSettings()">&times;</button>
+        </div>
+        
+        <div class="settings-section">
+            <h4>📊 使用全量统计</h4>
+            <div class="usage-stats">
+                <p>对话次数: <span class="stat-value" id="stat-conversations">0</span></p>
+                <p>Token 消耗: <span class="stat-value" id="stat-tokens">0</span></p>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h4>⚡ 功能设置</h4>
+            <div class="settings-item">
+                <label for="setting-daily-limit">每日对话限制</label>
+                <input type="text" id="setting-daily-limit" placeholder="获取中..." disabled>
+                <p class="hint">由系统管理员统一配置</p>
+            </div>
+            <div class="settings-item">
+                <label for="setting-model">选择模型</label>
+                <select id="setting-model" disabled>
+                    <option value="">系统默认</option>
+                    <option value="qwen-plus">qwen-plus</option>
+                    <option value="qwen-turbo">qwen-turbo</option>
+                    <option value="qwen-max">qwen-max</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h4>🔑 高级设置</h4>
+            <div class="settings-item">
+                <label for="setting-apikey">自定义 API Key</label>
+                <input type="password" id="setting-apikey" placeholder="使用系统默认" disabled>
+                <p class="hint">如需使用自己的 API Key，请在此输入</p>
+            </div>
+            <div class="settings-item">
+                <label for="setting-profile">自定义 Profile 文件</label>
+                <input type="text" id="setting-profile" placeholder="使用系统默认" disabled>
+                <p class="hint">自定义人设文件路径（相对或绝对路径）</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 桌面端侧边栏 -->
 <div id="sidebar">
     <div class="sidebar-header">
@@ -705,6 +1253,15 @@
         <div class="nav-title">日记档案</div>
         <div class="file-list" id="file-list">
             <div class="empty-state">加载中...</div>
+        </div>
+    </div>
+    
+    <!-- 用户信息区域 -->
+    <div class="user-info" id="user-info" style="display: none;">
+        <div class="user-email" id="user-email"></div>
+        <div class="user-actions">
+            <button class="btn-settings" onclick="openSettings()">⚙️ 设置</button>
+            <button class="btn-logout" onclick="logout()">退出</button>
         </div>
     </div>
 </div>
@@ -737,8 +1294,16 @@
 
 <!-- 移动端顶部标题栏 -->
 <div id="mobile-header">
-    <h1>◉ MOSS</h1>
-    <p>550W 量子日记管理系统</p>
+    <div class="header-left">
+        <h1>◉ MOSS</h1>
+        <p>550W 量子日记管理系统</p>
+    </div>
+    <div class="header-right">
+        <button id="mobile-user-btn" onclick="openMobileUserMenu()">
+            <span>👤</span>
+            <span>我的</span>
+        </button>
+    </div>
 </div>
 
 <!-- 移动端主内容区 -->
@@ -762,6 +1327,56 @@
         </div>
         <div id="mobile-archive-list">
             <div class="empty-state">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 移动端用户菜单弹窗 -->
+<div id="mobile-user-modal">
+    <div class="mobile-user-content">
+        <div class="mobile-user-header">
+            <h3>👤 我的</h3>
+            <button onclick="closeMobileUserMenu()" class="close-btn">&times;</button>
+        </div>
+        <div class="mobile-user-body">
+            <div class="user-email-row" id="mobile-user-email"></div>
+            
+            <div class="mobile-settings-section">
+                <h4>📊 使用统计</h4>
+                <div class="mobile-usage-stats">
+                    <p>对话次数: <span id="mobile-stat-conversations">0</span></p>
+                    <p>Token 消耗: <span id="mobile-stat-tokens">0</span></p>
+                </div>
+            </div>
+            
+            <div class="mobile-settings-section">
+                <h4>⚡ 功能设置</h4>
+                <div class="mobile-setting-item">
+                    <label>每日对话限制</label>
+                    <p id="mobile-setting-daily-limit">不限制</p>
+                </div>
+                <div class="mobile-setting-item">
+                    <label>选择模型</label>
+                    <p id="mobile-setting-model">系统默认</p>
+                </div>
+            </div>
+            
+            <div class="mobile-settings-section">
+                <h4>🔑 高级设置</h4>
+                <div class="mobile-setting-item">
+                    <label>API Key</label>
+                    <p id="mobile-setting-apikey">使用系统默认</p>
+                </div>
+                <div class="mobile-setting-item">
+                    <label>Profile 文件</label>
+                    <p id="mobile-setting-profile">使用系统默认</p>
+                </div>
+            </div>
+            
+            <button onclick="logout(); closeMobileUserMenu();" class="mobile-logout-btn">
+                <span>🚪</span>
+                <span>退出登录</span>
+            </button>
         </div>
     </div>
 </div>
@@ -803,6 +1418,11 @@
 </div>
 
 <script>
+    // ==================== 认证相关变量 ====================
+    let authToken = localStorage.getItem('buddylog_token');
+    let currentUser = null;
+    let isLoginMode = true;
+    
     // 桌面端元素
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
@@ -817,9 +1437,231 @@
     const mobileReaderView = document.getElementById('mobile-reader-view');
     const mobileNavChat = document.getElementById('mobile-nav-chat');
     const mobileNavArchive = document.getElementById('mobile-nav-archive');
+    const mobileUserModal = document.getElementById('mobile-user-modal');
     
     let history = [];
     let currentMobileView = 'chat';
+    
+    // 打开移动端用户菜单
+    async function openMobileUserMenu() {
+        if (!currentUser) return;
+        
+        // 重新获取最新用户信息
+        try {
+            const response = await fetch('/auth/me', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (response.ok) {
+                currentUser = await response.json();
+            }
+        } catch (e) {
+            console.error('获取用户信息失败:', e);
+        }
+        
+        // 填充用户邮箱
+        document.getElementById('mobile-user-email').textContent = currentUser.email || '';
+        
+        // 填充使用统计
+        document.getElementById('mobile-stat-conversations').textContent = currentUser.usage?.total_conversations || 0;
+        document.getElementById('mobile-stat-tokens').textContent = currentUser.usage?.total_tokens || 0;
+        
+        // 填充功能设置（显示实际生效的限制值）
+        const effectiveLimit = currentUser.effective_daily_limit;
+        document.getElementById('mobile-setting-daily-limit').textContent = effectiveLimit + ' 次/天';
+        
+        const model = currentUser.settings?.selected_model;
+        document.getElementById('mobile-setting-model').textContent = model || '系统默认';
+        
+        // 填充高级设置
+        const apiKey = currentUser.settings?.api_key;
+        document.getElementById('mobile-setting-apikey').textContent = apiKey ? '已设置' : '使用系统默认';
+        
+        const profileFile = currentUser.settings?.profile_file;
+        document.getElementById('mobile-setting-profile').textContent = profileFile || '使用系统默认';
+        
+        mobileUserModal.classList.add('active');
+    }
+    
+    // 关闭移动端用户菜单
+    function closeMobileUserMenu() {
+        mobileUserModal.classList.remove('active');
+    }
+    
+    // 点击移动端用户菜单外部关闭
+    mobileUserModal.addEventListener('click', function(e) {
+        if (e.target === this) closeMobileUserMenu();
+    });
+    
+    // ==================== 认证相关函数 ====================
+    
+    // 切换登录/注册模式
+    function toggleAuthMode() {
+        isLoginMode = !isLoginMode;
+        const title = document.getElementById('auth-title');
+        const subtitle = document.getElementById('auth-subtitle');
+        const submitBtn = document.getElementById('auth-submit-btn');
+        const switchText = document.getElementById('auth-switch-text');
+        const switchLink = document.getElementById('auth-switch-link');
+        
+        if (isLoginMode) {
+            title.textContent = '欢迎回来';
+            subtitle.textContent = '登录您的 MOSS 账号';
+            submitBtn.textContent = '登录';
+            switchText.textContent = '还没有账号？';
+            switchLink.textContent = '立即注册';
+        } else {
+            title.textContent = '创建账号';
+            subtitle.textContent = '注册 MOSS 账号开始记录';
+            submitBtn.textContent = '注册';
+            switchText.textContent = '已有账号？';
+            switchLink.textContent = '立即登录';
+        }
+        document.getElementById('auth-error').style.display = 'none';
+    }
+    
+    // 显示认证错误
+    function showAuthError(message) {
+        const errorEl = document.getElementById('auth-error');
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+    }
+    
+    // 处理认证表单提交
+    document.getElementById('auth-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const submitBtn = document.getElementById('auth-submit-btn');
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = isLoginMode ? '登录中...' : '注册中...';
+        
+        try {
+            const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                authToken = data.access_token;
+                localStorage.setItem('buddylog_token', authToken);
+                localStorage.setItem('buddylog_email', data.email);
+                await initApp();
+            } else {
+                showAuthError(data.detail || '操作失败，请重试');
+            }
+        } catch (e) {
+            showAuthError('网络错误，请检查连接');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = isLoginMode ? '登录' : '注册';
+        }
+    });
+    
+    // 切换登录/注册链接
+    document.getElementById('auth-switch-link').addEventListener('click', toggleAuthMode);
+    
+    // 退出登录
+    function logout() {
+        authToken = null;
+        currentUser = null;
+        localStorage.removeItem('buddylog_token');
+        localStorage.removeItem('buddylog_email');
+        document.getElementById('auth-container').style.display = 'flex';
+        document.getElementById('user-info').style.display = 'none';
+        document.getElementById('email').value = '';
+        document.getElementById('password').value = '';
+    }
+    
+    // 获取认证头
+    function getAuthHeaders() {
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+        };
+    }
+    
+    // 初始化应用
+    async function initApp() {
+        if (!authToken) {
+            document.getElementById('auth-container').style.display = 'flex';
+            return;
+        }
+        
+        try {
+            // 获取用户信息
+            const response = await fetch('/auth/me', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            
+            if (response.ok) {
+                currentUser = await response.json();
+                
+                // 隐藏认证界面，显示主应用
+                document.getElementById('auth-container').style.display = 'none';
+                
+                // 显示用户信息
+                document.getElementById('user-email').textContent = currentUser.email;
+                document.getElementById('user-info').style.display = 'block';
+                
+                // 加载日记列表
+                loadFiles();
+            } else {
+                // Token 无效，清除并重新登录
+                logout();
+            }
+        } catch (e) {
+            console.error('初始化失败:', e);
+            logout();
+        }
+    }
+    
+    // 打开设置弹窗
+    async function openSettings() {
+        if (!currentUser) return;
+        
+        // 重新获取最新用户信息
+        try {
+            const response = await fetch('/auth/me', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (response.ok) {
+                currentUser = await response.json();
+            }
+        } catch (e) {
+            console.error('获取用户信息失败:', e);
+        }
+        
+        // 填充使用统计
+        document.getElementById('stat-conversations').textContent = currentUser.usage?.total_conversations || 0;
+        document.getElementById('stat-tokens').textContent = currentUser.usage?.total_tokens || 0;
+        
+        // 填充功能设置（显示实际生效的限制值）
+        const effectiveLimitDesktop = currentUser.effective_daily_limit;
+        document.getElementById('setting-daily-limit').value = effectiveLimitDesktop + ' 次/天';
+        document.getElementById('setting-model').value = currentUser.settings?.selected_model || '';
+        
+        // 填充高级设置（用户值为null时显示空，展示placeholder）
+        document.getElementById('setting-apikey').value = currentUser.settings?.api_key || '';
+        document.getElementById('setting-profile').value = currentUser.settings?.profile_file || '';
+        
+        document.getElementById('settings-modal').style.display = 'flex';
+    }
+    
+    // 关闭设置弹窗
+    function closeSettings() {
+        document.getElementById('settings-modal').style.display = 'none';
+    }
+    
+    // 点击设置弹窗外部关闭
+    document.getElementById('settings-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeSettings();
+    });
 
     // 检测是否为移动端
     function isMobile() {
@@ -900,7 +1742,9 @@
     // 加载文件内容（桌面端）
     async function loadFileContent(filename) {
         try {
-            const res = await fetch('/file/' + encodeURIComponent(filename));
+            const res = await fetch('/file/' + encodeURIComponent(filename), {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
             if (res.ok) {
                 const content = await res.text();
                 let html = renderMarkdown(content);
@@ -916,7 +1760,9 @@
     // 加载文件内容（移动端）
     async function loadMobileFileContent(filename) {
         try {
-            const res = await fetch('/file/' + encodeURIComponent(filename));
+            const res = await fetch('/file/' + encodeURIComponent(filename), {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
             if (res.ok) {
                 const content = await res.text();
                 let html = renderMarkdown(content);
@@ -945,7 +1791,9 @@
     // 加载文件列表（桌面端）
     async function loadFiles() {
         try {
-            const res = await fetch('/files');
+            const res = await fetch('/files', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
             const files = await res.json();
             const list = document.getElementById('file-list');
             
@@ -996,7 +1844,9 @@
     // 加载文件列表（移动端）
     async function loadMobileFiles() {
         try {
-            const res = await fetch('/files');
+            const res = await fetch('/files', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
             const files = await res.json();
             const list = document.getElementById('mobile-archive-list');
             
@@ -1112,7 +1962,7 @@
         try {
             const res = await fetch('/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ content: text, history: history.slice(-10) })
             });
             const data = await res.json();
@@ -1185,7 +2035,7 @@
         try {
             const res = await fetch('/archive', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ conversation: history })
             });
             
@@ -1253,6 +2103,9 @@
             mobileReaderView.style.display = 'none';
         }
     });
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', initApp);
 </script>
 </body>
 </html>

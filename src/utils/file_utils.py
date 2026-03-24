@@ -2,8 +2,11 @@ import os
 import datetime
 import json
 import re
+from typing import Optional
 
-DATA_DIR = os.getenv("DATA_DIR", "data")
+# 获取项目根目录（main.py 所在目录）
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DATA_DIR = os.getenv("DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
 
 
 def ensure_data_dir():
@@ -11,23 +14,54 @@ def ensure_data_dir():
     os.makedirs(DATA_DIR, exist_ok=True)
 
 
-def _load_md_file(filename: str) -> str:
+def _get_user_base_dir(user_email: Optional[str] = None) -> str:
+    """获取用户数据基础目录"""
+    if user_email:
+        # 导入在这里避免循环依赖
+        from src.utils.user_utils import get_user_data_dir
+        user_dir = get_user_data_dir(user_email)
+        if user_dir:
+            return user_dir
+    return DATA_DIR
+
+
+def _get_diaries_dir(user_email: Optional[str] = None) -> str:
+    """获取日记目录"""
+    if user_email:
+        from src.utils.user_utils import get_user_diaries_dir
+        diaries_dir = get_user_diaries_dir(user_email)
+        if diaries_dir:
+            return diaries_dir
+    return DATA_DIR
+
+
+def _load_md_file(filename: str, user_email: Optional[str] = None) -> str:
     """通用：加载markdown文件内容"""
-    filepath = os.path.join(DATA_DIR, filename)
+    base_dir = _get_user_base_dir(user_email)
+    filepath = os.path.join(base_dir, filename)
     if os.path.exists(filepath):
         with open(filepath, "r", encoding="utf-8") as f:
             return f.read()
     return ""
 
 
-def load_profile():
+def load_profile(user_email: Optional[str] = None):
     """加载profile.md文件内容"""
+    # 如果用户设置了自定义profile，使用用户的
+    if user_email:
+        from src.utils.user_utils import get_user_settings
+        settings = get_user_settings(user_email)
+        custom_profile = settings.get("profile_file")
+        if custom_profile and os.path.exists(custom_profile):
+            with open(custom_profile, "r", encoding="utf-8") as f:
+                return f.read()
+    # 否则使用系统默认profile
     return _load_md_file("profile.md")
 
 
-def extract_agent_persona() -> str:
+def extract_agent_persona(user_email: Optional[str] = None) -> str:
     """从profile.md中提取角色设定部分"""
-    content = _load_md_file("profile.md")
+    content = load_profile(user_email)
     if not content:
         return ""
     
@@ -39,9 +73,9 @@ def extract_agent_persona() -> str:
     return ""
 
 
-def extract_profile_without_persona() -> str:
+def extract_profile_without_persona(user_email: Optional[str] = None) -> str:
     """从profile.md中提取除角色设定外的其他内容"""
-    content = _load_md_file("profile.md")
+    content = load_profile(user_email)
     if not content:
         return ""
     
@@ -51,8 +85,15 @@ def extract_profile_without_persona() -> str:
     return cleaned.strip()
 
 
-def load_memory():
+def load_memory(user_email: Optional[str] = None):
     """加载memory.md文件内容"""
+    if user_email:
+        from src.utils.user_utils import get_user_memory_path
+        memory_path = get_user_memory_path(user_email)
+        if memory_path and os.path.exists(memory_path):
+            with open(memory_path, "r", encoding="utf-8") as f:
+                return f.read()
+    # 回退到默认路径
     return _load_md_file("memory.md")
 
 
@@ -96,41 +137,54 @@ def _sort_diary_files(filename: str):
     return ("", 0)
 
 
-def load_recent_diaries():
+def load_recent_diaries(user_email: Optional[str] = None):
     """加载最近日记的对话记录（带日期标注）"""
+    diaries_dir = _get_diaries_dir(user_email)
     today = datetime.date.today().isoformat()
-    diary_files = [f for f in os.listdir(DATA_DIR)
+    
+    if not os.path.exists(diaries_dir):
+        return []
+    
+    diary_files = [f for f in os.listdir(diaries_dir)
                    if f.startswith("diary_") and f.endswith('.md')]
     diary_files.sort(key=_sort_diary_files, reverse=True)
 
     conversations = []
     for filename in diary_files[:7]:
-        content = _load_md_file(filename)
-        date_str = _extract_date_from_archive(filename)
-        conversation = _extract_conversation_from_archive(content)
+        filepath = os.path.join(diaries_dir, filename)
+        if os.path.exists(filepath):
+            with open(filepath, "r", encoding="utf-8") as f:
+                content = f.read()
+            date_str = _extract_date_from_archive(filename)
+            conversation = _extract_conversation_from_archive(content)
 
-        if conversation:
-            # 如果是今天的对话，特殊标注
-            if date_str == today:
-                header = f"【今天】"
-            else:
-                header = f"【{date_str}】"
-            conversations.append(f"{header}\n{conversation}")
+            if conversation:
+                # 如果是今天的对话，特殊标注
+                if date_str == today:
+                    header = f"【今天】"
+                else:
+                    header = f"【{date_str}】"
+                conversations.append(f"{header}\n{conversation}")
 
     return conversations
 
 
-def get_today_draft_file():
+def get_today_draft_file(user_email: Optional[str] = None):
     """获取今天的草稿文件路径"""
+    diaries_dir = _get_diaries_dir(user_email)
     today = datetime.date.today().isoformat()
-    draft_path = os.path.join(DATA_DIR, f"diary_{today}_draft.md")
+    draft_path = os.path.join(diaries_dir, f"diary_{today}_draft.md")
     return draft_path if os.path.exists(draft_path) else None
 
 
-def append_to_draft(user_msg, assistant_reply):
+def append_to_draft(user_msg, assistant_reply, user_email: Optional[str] = None):
     """追加内容到今天的草稿文件"""
+    diaries_dir = _get_diaries_dir(user_email)
     today = datetime.date.today().isoformat()
-    draft_path = os.path.join(DATA_DIR, f"diary_{today}_draft.md")
+    draft_path = os.path.join(diaries_dir, f"diary_{today}_draft.md")
+    
+    # 确保目录存在
+    os.makedirs(diaries_dir, exist_ok=True)
     
     # 如果草稿不存在，创建初始结构
     if not os.path.exists(draft_path):
@@ -145,9 +199,12 @@ def append_to_draft(user_msg, assistant_reply):
     return os.path.basename(draft_path)
 
 
-def _get_next_diary_index(date_str: str) -> int:
+def _get_next_diary_index(date_str: str, user_email: Optional[str] = None) -> int:
     """获取指定日期下一个日记索引"""
-    diary_files = [f for f in os.listdir(DATA_DIR) 
+    diaries_dir = _get_diaries_dir(user_email)
+    if not os.path.exists(diaries_dir):
+        return 1
+    diary_files = [f for f in os.listdir(diaries_dir) 
                    if f.startswith(f"diary_{date_str}") and f.endswith('.md') and '_draft' not in f]
     return len(diary_files) + 1
 
@@ -181,7 +238,8 @@ def _write_diary_file(filepath: str, date_str: str, idx: int, structured_data: d
 
 
 def finalize_diary(structured_data: dict, conversation: list, diary_article: str, 
-                   draft_date: datetime.date = None, delete_draft: bool = False) -> str:
+                   draft_date: datetime.date = None, delete_draft: bool = False,
+                   user_email: Optional[str] = None) -> str:
     """
     完成日记归档（通用函数）
     
@@ -191,27 +249,33 @@ def finalize_diary(structured_data: dict, conversation: list, diary_article: str
         diary_article: AI生成的日记文章
         draft_date: 指定日期（None表示今天）
         delete_draft: 是否删除草稿文件
+        user_email: 用户邮箱（可选，用于用户隔离）
     
     Returns:
         生成的文件名
     """
+    diaries_dir = _get_diaries_dir(user_email)
+    
     # 确定日期
     if draft_date:
         date_str = draft_date.isoformat()
     else:
         date_str = datetime.date.today().isoformat()
     
+    # 确保目录存在
+    os.makedirs(diaries_dir, exist_ok=True)
+    
     # 获取索引并生成文件名
-    idx = _get_next_diary_index(date_str)
+    idx = _get_next_diary_index(date_str, user_email)
     filename = f"diary_{date_str}_{idx}.md"
-    filepath = os.path.join(DATA_DIR, filename)
+    filepath = os.path.join(diaries_dir, filename)
     
     # 写入文件
     _write_diary_file(filepath, date_str, idx, structured_data, conversation, diary_article)
     
     # 按需删除草稿
     if delete_draft:
-        draft_path = get_today_draft_file()
+        draft_path = get_today_draft_file(user_email)
         if draft_path:
             os.remove(draft_path)
     
@@ -246,12 +310,16 @@ def _extract_conversation_from_draft(content: str) -> list:
     return conversation
 
 
-def auto_archive_expired_drafts(archive_service):
+def auto_archive_expired_drafts(archive_service, user_email: Optional[str] = None):
     """自动归档过期的草稿（非今天的）"""
+    diaries_dir = _get_diaries_dir(user_email)
     today = datetime.date.today()
     archived = []
     
-    for filename in os.listdir(DATA_DIR):
+    if not os.path.exists(diaries_dir):
+        return archived
+    
+    for filename in os.listdir(diaries_dir):
         if not filename.endswith('_draft.md'):
             continue
         draft_date = _parse_draft_date(filename)
@@ -259,30 +327,65 @@ def auto_archive_expired_drafts(archive_service):
             continue
         
         # 读取并归档
-        content = _load_md_file(filename)
+        filepath = os.path.join(diaries_dir, filename)
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read()
         conversation = _extract_conversation_from_draft(content)
-        result = archive_service.auto_archive_from_draft(conversation, draft_date)
+        result = archive_service.auto_archive_from_draft(conversation, draft_date, user_email)
         
         # 删除原草稿
-        os.remove(os.path.join(DATA_DIR, filename))
+        os.remove(filepath)
         archived.append({'old_draft': filename, 'new_file': result['filename']})
     
     return archived
 
 
-def update_memory_file(new_memory):
+def update_memory_file(new_memory, user_email: Optional[str] = None):
     """更新memory.md文件"""
+    if user_email:
+        from src.utils.user_utils import get_user_memory_path
+        memory_path = get_user_memory_path(user_email)
+        if memory_path:
+            # 确保目录存在
+            os.makedirs(os.path.dirname(memory_path), exist_ok=True)
+            with open(memory_path, "w", encoding="utf-8") as f:
+                f.write(new_memory)
+            return
+    # 回退到默认路径
     memory_path = os.path.join(DATA_DIR, "memory.md")
     with open(memory_path, "w", encoding="utf-8") as f:
         f.write(new_memory)
 
 
-def list_diary_files():
-    """获取已有的日记文件列表"""
-    files = sorted([f for f in os.listdir(DATA_DIR) if f.endswith('.md')], reverse=True)
-    return files
+def list_diary_files(user_email: Optional[str] = None):
+    """获取已有的日记文件列表（包括系统文件）"""
+    files = []
+    
+    # 添加系统文件（memory.md, profile.md）
+    base_dir = _get_user_base_dir(user_email)
+    system_files = ['memory.md', 'profile.md']
+    for sys_file in system_files:
+        sys_path = os.path.join(base_dir, sys_file)
+        if os.path.exists(sys_path):
+            files.append(sys_file)
+    
+    # 添加日记文件
+    diaries_dir = _get_diaries_dir(user_email)
+    if os.path.exists(diaries_dir):
+        diary_files = [f for f in os.listdir(diaries_dir) if f.endswith('.md')]
+        files.extend(diary_files)
+    
+    return sorted(files, reverse=True)
 
 
-def get_diary_file_path(filename):
+def get_diary_file_path(filename, user_email: Optional[str] = None):
     """获取日记文件路径"""
-    return os.path.join(DATA_DIR, filename)
+    # 系统文件（memory.md, profile.md）存放在用户根目录
+    system_files = ['memory.md', 'profile.md']
+    if filename in system_files:
+        base_dir = _get_user_base_dir(user_email)
+        return os.path.join(base_dir, filename)
+
+    # 日记文件存放在 diaries 子目录
+    diaries_dir = _get_diaries_dir(user_email)
+    return os.path.join(diaries_dir, filename)

@@ -9,10 +9,10 @@ class MemoryService:
     def __init__(self, model: str):
         self.model = model
     
-    def update_memory(self, conversation: list, date_str: str):
+    def update_memory(self, conversation: list, date_str: str, user_email: str = None):
         """更新长期记忆，融合新的对话内容"""
         # 加载旧记忆
-        old_memory = load_memory()
+        old_memory = load_memory(user_email)
         
         # 将对话转换为文本格式
         conversation_text = "\n".join([
@@ -93,7 +93,7 @@ class MemoryService:
         if memory_response.status_code == 200:
             new_memory = memory_response.output.choices[0].message.content
             # 写入新记忆
-            update_memory_file(new_memory)
-            print("Memory updated successfully")
+            update_memory_file(new_memory, user_email)
+            print(f"Memory updated successfully for user: {user_email}")
         else:
-            print(f"Failed to update memory: {memory_response.message}")
+            print(f"Failed to update memory for user {user_email}: {memory_response.message}")
