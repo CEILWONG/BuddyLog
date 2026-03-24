@@ -1175,6 +1175,9 @@
                 <label for="password">密码</label>
                 <input type="password" id="password" name="password" placeholder="至少6位字符" required minlength="6">
             </div>
+            <div id="auth-register-hint" style="display: none; margin-bottom: 15px; padding: 10px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px; font-size: 12px; color: #856404; line-height: 1.5;">
+                💡 提示：推荐使用真实邮箱，使用平时不常用的密码，但需要记住密码，因为尚未开发找回密码功能。
+            </div>
             <button type="submit" class="btn-primary" id="auth-submit-btn">登录</button>
         </form>
         
@@ -1503,18 +1506,21 @@
         const switchText = document.getElementById('auth-switch-text');
         const switchLink = document.getElementById('auth-switch-link');
         
+        const registerHint = document.getElementById('auth-register-hint');
         if (isLoginMode) {
             title.textContent = '欢迎回来';
             subtitle.textContent = '登录您的 MOSS 账号';
             submitBtn.textContent = '登录';
             switchText.textContent = '还没有账号？';
             switchLink.textContent = '立即注册';
+            registerHint.style.display = 'none';
         } else {
             title.textContent = '创建账号';
             subtitle.textContent = '注册 MOSS 账号开始记录';
             submitBtn.textContent = '注册';
             switchText.textContent = '已有账号？';
             switchLink.textContent = '立即登录';
+            registerHint.style.display = 'block';
         }
         document.getElementById('auth-error').style.display = 'none';
     }
