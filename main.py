@@ -1,5 +1,6 @@
 import os
-from fastapi import FastAPI, HTTPException, Depends
+from datetime import datetime, date
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from dotenv import load_dotenv
@@ -10,6 +11,10 @@ load_dotenv()
 dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
 dashscope.base_http_api_url = "https://dashscope.aliyuncs.com/api/v1"
 MODEL = os.getenv("MODEL_NAME", "qwen-plus")
+
+# IP 注册限制缓存：{ip: {日期: 次数}}
+ip_register_cache = {}
+MAX_REGISTERS_PER_IP_PER_DAY = 3  # 每个 IP 每天最多注册次数
 
 # 导入模块
 from src.models.schemas import Message, ArchiveRequest
@@ -50,8 +55,18 @@ chat_service = ChatService(MODEL, archive_service)
 # ==================== 认证路由 ====================
 
 @app.post("/auth/register", response_model=TokenResponse)
-async def register(user_data: UserRegister):
+async def register(user_data: UserRegister, request: Request):
     """用户注册"""
+    # 获取客户端 IP
+    client_ip = request.client.host
+    
+    # 检查该 IP 今天是否已达到注册上限
+    today = date.today().isoformat()
+    ip_record = ip_register_cache.get(client_ip, {})
+    register_count = ip_record.get(today, 0)
+    if register_count >= MAX_REGISTERS_PER_IP_PER_DAY:
+        raise HTTPException(status_code=429, detail=f"每个 IP 每天最多只能注册 {MAX_REGISTERS_PER_IP_PER_DAY} 个账号")
+    
     # 检查邮箱是否已存在
     existing_user = get_user_by_email(user_data.email)
     if existing_user:
@@ -61,6 +76,11 @@ async def register(user_data: UserRegister):
     user_info = create_user(user_data.email, user_data.password)
     if not user_info:
         raise HTTPException(status_code=500, detail="创建用户失败")
+    
+    # 增加该 IP 今天的注册计数
+    if client_ip not in ip_register_cache:
+        ip_register_cache[client_ip] = {}
+    ip_register_cache[client_ip][today] = register_count + 1
     
     # 生成Token
     access_token = create_access_token(data={"sub": user_data.email})

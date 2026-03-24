@@ -1274,7 +1274,7 @@
             <div class="message buddy">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
         </div>
         <div id="input-area">
-            <textarea id="user-input" placeholder="向 MOSS 输入数据..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+            <textarea id="user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
             <button onclick="sendMessage()" id="send-btn" class="btn-primary">发送</button>
             <button onclick="completeToday()" id="complete-btn" class="btn-secondary">完成今日</button>
         </div>
@@ -1314,7 +1314,7 @@
             <div class="message buddy">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
         </div>
         <div id="input-area">
-            <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+            <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
             <button onclick="sendMessage()" id="mobile-send-btn" class="btn-primary">发送</button>
             <button onclick="completeToday()" id="mobile-complete-btn" class="btn-secondary">完成</button>
         </div>
