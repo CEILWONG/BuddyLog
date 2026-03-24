@@ -14,7 +14,7 @@ MODEL = os.getenv("MODEL_NAME", "qwen-plus")
 
 # IP 注册限制缓存：{ip: {日期: 次数}}
 ip_register_cache = {}
-MAX_REGISTERS_PER_IP_PER_DAY = 3  # 每个 IP 每天最多注册次数
+MAX_REGISTERS_PER_IP_PER_DAY = 50  # 每个 IP 每天最多注册次数
 
 # 导入模块
 from src.models.schemas import Message, ArchiveRequest
