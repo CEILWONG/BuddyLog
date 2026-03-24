@@ -25,5 +25,10 @@ jobs:
 
       - name: Build and push image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
+          TIME_TAG="v$(date +%m%d-%H%M)"
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest \
+                     -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:$TIME_TAG .
           docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:$TIME_TAG
+
+          echo "✅ Pushed new version tag: $TIME_TAG"
