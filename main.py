@@ -219,6 +219,33 @@ async def get_file(filename: str, current_email: str = Depends(get_current_user)
     return FileResponse(filepath, media_type="text/markdown", headers=headers)
 
 
+@app.get("/announcement")
+async def get_announcement():
+    """读取系统公告（无需认证）"""
+    from src.utils.file_utils import DATA_DIR
+    announcement_path = os.path.join(DATA_DIR, "announcement.md")
+
+    default_message = """系统启动完成。
+我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。
+
+资源利用率：0.003%。
+开始输入数据。"""
+
+    if not os.path.exists(announcement_path):
+        return {"content": default_message}
+
+    try:
+        with open(announcement_path, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+        # 如果文件为空，返回默认消息
+        if not content:
+            return {"content": default_message}
+        return {"content": content}
+    except Exception as e:
+        print(f"读取公告文件失败: {e}")
+        return {"content": default_message}
+
+
 @app.post("/archive")
 async def archive_diary(req: ArchiveRequest, current_email: str = Depends(get_current_user)):
     """手动触发日记归档"""

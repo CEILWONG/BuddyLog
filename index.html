@@ -1274,7 +1274,7 @@
     <!-- 聊天视图 -->
     <div id="chat-view">
         <div id="chat-box">
-            <div class="message buddy">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
+            <div class="message buddy" id="welcome-message-desktop">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
         </div>
         <div id="input-area">
             <textarea id="user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
@@ -1314,7 +1314,7 @@
     <!-- 移动端聊天视图 -->
     <div id="mobile-chat-view">
         <div id="chat-box">
-            <div class="message buddy">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
+            <div class="message buddy" id="welcome-message-mobile">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
         </div>
         <div id="input-area">
             <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
@@ -1593,28 +1593,53 @@
     }
     
     // 初始化应用
+    // 加载系统公告
+    async function loadAnnouncement() {
+        try {
+            const response = await fetch('/announcement');
+            if (response.ok) {
+                const data = await response.json();
+                const content = data.content;
+                // 更新桌面端和移动端的欢迎消息
+                const desktopWelcome = document.getElementById('welcome-message-desktop');
+                const mobileWelcome = document.getElementById('welcome-message-mobile');
+                if (desktopWelcome) {
+                    desktopWelcome.innerHTML = content.replace(/\n/g, '<br>');
+                }
+                if (mobileWelcome) {
+                    mobileWelcome.innerHTML = content.replace(/\n/g, '<br>');
+                }
+            }
+        } catch (e) {
+            console.error('加载公告失败:', e);
+        }
+    }
+
     async function initApp() {
+        // 先加载公告（无需认证）
+        await loadAnnouncement();
+
         if (!authToken) {
             document.getElementById('auth-container').style.display = 'flex';
             return;
         }
-        
+
         try {
             // 获取用户信息
             const response = await fetch('/auth/me', {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
-            
+
             if (response.ok) {
                 currentUser = await response.json();
-                
+
                 // 隐藏认证界面，显示主应用
                 document.getElementById('auth-container').style.display = 'none';
-                
+
                 // 显示用户信息
                 document.getElementById('user-email').textContent = currentUser.email;
                 document.getElementById('user-info').style.display = 'block';
-                
+
                 // 加载日记列表
                 loadFiles();
             } else {
