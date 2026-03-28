@@ -1,8 +1,10 @@
 import os
+import io
+import zipfile
 from datetime import datetime, date
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from dotenv import load_dotenv
 import dashscope
 
@@ -257,6 +259,56 @@ async def archive_diary(req: ArchiveRequest, current_email: str = Depends(get_cu
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/export")
+async def export_data(current_email: str = Depends(get_current_user)):
+    """导出用户所有数据（日记和长期记忆）为 zip 压缩包"""
+    try:
+        from src.utils.file_utils import _get_user_base_dir, _get_diaries_dir
+        
+        # 获取用户数据目录
+        base_dir = _get_user_base_dir(current_email)
+        diaries_dir = _get_diaries_dir(current_email)
+        
+        # 创建内存中的 zip 文件
+        zip_buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # 添加系统文件（memory.md, profile.md）
+            system_files = ['memory.md', 'profile.md']
+            for filename in system_files:
+                filepath = os.path.join(base_dir, filename)
+                if os.path.exists(filepath):
+                    zip_file.write(filepath, filename)
+            
+            # 添加日记文件
+            if os.path.exists(diaries_dir):
+                for filename in os.listdir(diaries_dir):
+                    if filename.endswith('.md'):
+                        filepath = os.path.join(diaries_dir, filename)
+                        # 在 zip 中使用 diaries/ 子目录
+                        zip_file.write(filepath, os.path.join('diaries', filename))
+        
+        # 准备响应
+        zip_buffer.seek(0)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        safe_email = current_email.replace('@', '_at_').replace('.', '_')
+        filename = f"buddylog_export_{safe_email}_{timestamp}.zip"
+        
+        return StreamingResponse(
+            zip_buffer,
+            media_type='application/zip',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Type': 'application/zip'
+            }
+        )
+    except Exception as e:
+        print(f"Error in export: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")
 
 
 if __name__ == "__main__":

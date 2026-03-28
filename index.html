@@ -796,6 +796,53 @@
             color: #e17055;
         }
         
+        /* 导出按钮样式 */
+        .btn-export {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.3);
+            color: #2d3436;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-export:hover {
+            background: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+        
+        .btn-export:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* 桌面端导出按钮样式 */
+        .btn-export-desktop {
+            padding: 4px 8px;
+            background: rgba(253, 121, 168, 0.1);
+            color: #fd79a8;
+            border: 1px solid rgba(253, 121, 168, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-export-desktop:hover {
+            background: rgba(253, 121, 168, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .btn-export-desktop:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         /* 移动端阅读视图 */
         #mobile-reader-view {
             position: fixed;
@@ -1253,7 +1300,10 @@
     </div>
     
     <div class="nav-section">
-        <div class="nav-title">日记档案</div>
+        <div class="nav-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>日记档案</span>
+            <button onclick="exportData()" class="btn-export-desktop" title="导出所有数据">📥</button>
+        </div>
         <div class="file-list" id="file-list">
             <div class="empty-state">加载中...</div>
         </div>
@@ -1327,6 +1377,7 @@
     <div id="mobile-archive-view">
         <div id="mobile-archive-header">
             <h2>📚 日记档案</h2>
+            <button onclick="exportData()" class="btn-export" title="导出所有数据">📥 导出</button>
         </div>
         <div id="mobile-archive-list">
             <div class="empty-state">加载中...</div>
@@ -2126,6 +2177,61 @@
         targetChatBox.scrollTop = targetChatBox.scrollHeight;
         
         loadFiles();
+    }
+
+    // 导出数据功能
+    async function exportData() {
+        const btn = document.querySelector('.btn-export');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⏳ 导出中...';
+        
+        try {
+            const response = await fetch('/export', {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            
+            if (!response.ok) {
+                throw new Error('导出失败');
+            }
+            
+            // 获取文件名
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = 'buddylog_export.zip';
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="(.+)"/);
+                if (match) filename = match[1];
+            }
+            
+            // 下载文件
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // 显示成功提示
+            const note = document.createElement('div');
+            note.className = 'system-note';
+            note.innerText = '◉ 数据导出成功';
+            const archiveList = document.getElementById('mobile-archive-list');
+            if (archiveList) {
+                archiveList.insertBefore(note, archiveList.firstChild);
+                setTimeout(() => note.remove(), 3000);
+            }
+            
+        } catch (e) {
+            console.error('导出失败:', e);
+            alert('导出失败，请稍后再试');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     }
 
     // 监听窗口大小变化
