@@ -984,12 +984,30 @@
         }
         
         /* 输入区 */
-        #input-area { 
-            padding: 15px 25px 25px 25px;
+        #input-area {
+            padding: 10px 15px 15px 15px;
             background: #fff;
-            display: flex; 
-            gap: 12px;
-            align-items: flex-start;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .input-main-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .input-toolbar-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .input-toolbar-left {
+            display: flex;
+            gap: 6px;
+        }
+        .btn-small {
+            padding: 8px 14px !important;
+            font-size: 0.8rem !important;
         }
         
         textarea { 
@@ -1201,6 +1219,250 @@
                 font-size: 0.85rem;
             }
         }
+
+        /* ==================== 图片上传 & 语音录制 ==================== */
+
+        .input-toolbar {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .toolbar-btn {
+            width: 36px;
+            height: 36px;
+            border: 1.5px solid #ffeaa7;
+            border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .toolbar-btn:hover {
+            border-color: #fd79a8;
+            background: #fff5f5;
+        }
+
+        .toolbar-btn:active {
+            transform: scale(0.95);
+        }
+
+        .toolbar-btn.recording {
+            border-color: #ff7675;
+            background: #fff5f5;
+            animation: recordPulse 1s infinite;
+        }
+
+        @keyframes recordPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 118, 117, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(255, 118, 117, 0); }
+        }
+
+        /* 图片预览区 */
+        .image-preview-area {
+            display: none;
+            padding: 8px 25px 0 25px;
+            background: #fff;
+        }
+
+        .image-preview-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .image-preview-item {
+            position: relative;
+            width: 64px;
+            height: 64px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #ffeaa7;
+        }
+
+        .image-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-preview-remove {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        /* 录音指示器 */
+        .recording-indicator {
+            display: none;
+            padding: 8px 25px;
+            background: #fff;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: #ff7675;
+        }
+
+        .recording-indicator.active {
+            display: flex;
+        }
+
+        .recording-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ff7675;
+            animation: recordDot 1s infinite;
+        }
+
+        @keyframes recordDot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .recording-cancel {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: #636e72;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        /* 聊天中的图片 */
+        .message-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            margin: 8px auto;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .message-image:hover {
+            transform: scale(1.05);
+        }
+
+        /* 语音播放器 */
+        .voice-player {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            margin: 6px 0;
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            border-radius: 20px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+        .voice-player:hover {
+            transform: scale(1.03);
+            box-shadow: 0 2px 8px rgba(253,121,168,0.3);
+        }
+        .voice-player.playing {
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
+        }
+        .voice-icon {
+            font-size: 12px;
+            color: #d63031;
+        }
+        .voice-bars {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 16px;
+        }
+        .voice-bars span {
+            display: block;
+            width: 3px;
+            height: 8px;
+            background: #d63031;
+            border-radius: 2px;
+            opacity: 0.5;
+        }
+        .voice-player.playing .voice-bars span {
+            animation: voiceWave 0.6s ease-in-out infinite alternate;
+            opacity: 1;
+        }
+        .voice-player.playing .voice-bars span:nth-child(1) { animation-delay: 0s; }
+        .voice-player.playing .voice-bars span:nth-child(2) { animation-delay: 0.15s; }
+        .voice-player.playing .voice-bars span:nth-child(3) { animation-delay: 0.3s; }
+        .voice-player.playing .voice-bars span:nth-child(4) { animation-delay: 0.45s; }
+        @keyframes voiceWave {
+            0% { height: 4px; }
+            100% { height: 16px; }
+        }
+        .voice-label {
+            font-size: 0.8rem;
+            color: #2d3436;
+        }
+
+        /* 图片全屏查看 */
+        .image-fullscreen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 10001;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .image-fullscreen.active {
+            display: flex;
+        }
+
+        .image-fullscreen img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 10px;
+        }
+
+        @media screen and (max-width: 768px) {
+            .toolbar-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 1rem;
+                border-radius: 10px;
+            }
+
+            .image-preview-area {
+                padding: 8px 15px 0 15px;
+            }
+
+            .recording-indicator {
+                padding: 8px 15px;
+            }
+
+            .message-image {
+                max-width: 160px;
+                max-height: 160px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1326,11 +1588,29 @@
         <div id="chat-box">
             <div class="message buddy" id="welcome-message-desktop">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
         </div>
-        <div id="input-area">
-            <textarea id="user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
-            <button onclick="sendMessage()" id="send-btn" class="btn-primary">发送</button>
-            <button onclick="completeToday()" id="complete-btn" class="btn-secondary">完成今日</button>
+        <div class="image-preview-area" id="desktop-image-preview-area">
+            <div class="image-preview-container" id="desktop-image-preview"></div>
         </div>
+        <div class="recording-indicator" id="desktop-recording-indicator">
+            <div class="recording-dot"></div>
+            <span id="desktop-recording-time">0:00</span>
+            <span>录音中...</span>
+            <button class="recording-cancel" onclick="cancelRecording()">取消</button>
+        </div>
+        <div id="input-area">
+            <div class="input-main-row">
+                <textarea id="user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                <button onclick="sendMessage()" id="send-btn" class="btn-primary">发送</button>
+            </div>
+            <div class="input-toolbar-row">
+                <div class="input-toolbar-left">
+                    <button class="toolbar-btn" onclick="triggerImageUpload('desktop')" title="上传图片">📷</button>
+                    <button class="toolbar-btn" id="desktop-voice-btn" onclick="toggleRecording('desktop')" title="点击录音">🎤</button>
+                </div>
+                <button onclick="completeToday()" id="complete-btn" class="btn-secondary btn-small">完成今日</button>
+            </div>
+        </div>
+        <input type="file" id="desktop-image-input" accept="image/*" style="display:none" onchange="handleImageSelect(event, 'desktop')">
     </div>
     
     <!-- 桌面端阅读视图 -->
@@ -1366,11 +1646,29 @@
         <div id="chat-box">
             <div class="message buddy" id="welcome-message-mobile">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
         </div>
-        <div id="input-area">
-            <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
-            <button onclick="sendMessage()" id="mobile-send-btn" class="btn-primary">发送</button>
-            <button onclick="completeToday()" id="mobile-complete-btn" class="btn-secondary">完成</button>
+        <div class="image-preview-area" id="mobile-image-preview-area">
+            <div class="image-preview-container" id="mobile-image-preview"></div>
         </div>
+        <div class="recording-indicator" id="mobile-recording-indicator">
+            <div class="recording-dot"></div>
+            <span id="mobile-recording-time">0:00</span>
+            <span>录音中...</span>
+            <button class="recording-cancel" onclick="cancelRecording()">取消</button>
+        </div>
+        <div id="input-area">
+            <div class="input-main-row">
+                <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                <button onclick="sendMessage()" id="mobile-send-btn" class="btn-primary">发送</button>
+            </div>
+            <div class="input-toolbar-row">
+                <div class="input-toolbar-left">
+                    <button class="toolbar-btn" onclick="triggerImageUpload('mobile')" title="上传图片">📷</button>
+                    <button class="toolbar-btn" id="mobile-voice-btn" onclick="toggleRecording('mobile')" title="点击录音">🎤</button>
+                </div>
+                <button onclick="completeToday()" id="mobile-complete-btn" class="btn-secondary btn-small">完成</button>
+            </div>
+        </div>
+        <input type="file" id="mobile-image-input" accept="image/*" style="display:none" onchange="handleImageSelect(event, 'mobile')">
     </div>
     
     <!-- 移动端档案视图 -->
@@ -1456,6 +1754,11 @@
     <div id="mobile-reader-content">
         <div class="empty-state">选择一个文件查看内容</div>
     </div>
+</div>
+
+<!-- 图片全屏查看 -->
+<div class="image-fullscreen" id="image-fullscreen" onclick="closeImageFullscreen()">
+    <img id="fullscreen-image" src="" alt="">
 </div>
 
 <!-- 日记确认弹窗 -->
@@ -1866,6 +2169,8 @@
             .replace(/```json\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
             .replace(/```\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\[图片:\s*(\S+)\]/g, '<div style="text-align:center;margin:12px 0;"><img src="/images/' + (currentUser?.user_id || '') + '/$1" class="message-image" onclick="openImageFullscreen(this.src)" alt="图片" style="max-width:80%;border-radius:10px;cursor:pointer;"></div>')
+            .replace(/\[语音:\s*(\S+)\]/g, '<div class="voice-player" onclick="toggleVoicePlay(this)" data-src="/audio/' + (currentUser?.user_id || '') + '/$1"><span class="voice-icon">&#9654;</span><span class="voice-bars"><span></span><span></span><span></span><span></span></span><span class="voice-label">语音消息</span></div>')
             .replace(/^> (.*)$/gm, '<blockquote style="margin: 8px 0; padding: 8px 12px; border-left: 3px solid #fab1a0; background: #fff5f5; border-radius: 0 8px 8px 0;">$1</blockquote>')
             .replace(/\n/g, '<br>');
     }
@@ -2008,11 +2313,35 @@
         }
     }
 
-    function appendMessage(role, text) {
+    function appendMessage(role, text, imageUrl, audioUrl) {
         const div = document.createElement('div');
         div.className = `message ${role}`;
-        div.innerHTML = text.replace(/\n/g, '<br>');
-        
+
+        let html = '';
+        if (imageUrl) {
+            html += `<div style="text-align:center;margin:8px 0;"><img src="${imageUrl}" class="message-image" onclick="openImageFullscreen('${imageUrl}')" alt="图片"></div>`;
+        }
+
+        // 处理文本中的标记
+        let processedText = text;
+        processedText = processedText.replace(/\[图片:\s*(\S+)\]/g, '');
+        processedText = processedText.replace(/\[语音:\s*(\S+)\]/g, '');
+        processedText = processedText.trim();
+
+        if (processedText) {
+            html += processedText.replace(/\n/g, '<br>');
+        }
+
+        // 渲染语音播放器
+        if (audioUrl) {
+            html += `<div class="voice-player" onclick="toggleVoicePlay(this)" data-src="${audioUrl}">
+                <span class="voice-icon">&#9654;</span>
+                <span class="voice-bars"><span></span><span></span><span></span><span></span></span>
+                <span class="voice-label">语音消息</span>
+            </div>`;
+        }
+        div.innerHTML = html;
+
         // 根据当前是移动端还是桌面端，向正确的聊天框添加消息
         const targetChatBox = isMobile() ? document.querySelector('#mobile-chat-view #chat-box') : chatBox;
         targetChatBox.appendChild(div);
@@ -2022,16 +2351,49 @@
     async function sendMessage() {
         const inputEl = isMobile() ? document.getElementById('mobile-user-input') : userInput;
         const btnEl = isMobile() ? document.getElementById('mobile-send-btn') : sendBtn;
-        
-        const text = inputEl.value.trim();
-        if (!text) return;
 
-        appendMessage('user', text);
-        inputEl.value = '';
-        inputEl.style.height = 'auto';
+        const text = inputEl.value.trim();
+        const hasImage = pendingImages.length > 0;
+        if (!text && !hasImage) return;
+
         btnEl.disabled = true;
 
-        history.push({ role: "user", content: text });
+        let imageUrl = null;
+        let messageText = text;
+        let audioUrl = null;
+
+        // 上传图片（如果有）
+        if (hasImage) {
+            try {
+                const imgInfo = await uploadPendingImage();
+                if (imgInfo) {
+                    imageUrl = imgInfo.uploadedUrl;
+                    messageText = (text ? text + ' ' : '') + `[图片: ${imgInfo.uploadedFilename}]`;
+                }
+            } catch (e) {
+                alert('图片上传失败: ' + e.message);
+                btnEl.disabled = false;
+                return;
+            }
+        }
+
+        // 附带语音标记（如果有）
+        if (pendingAudioFilename) {
+            messageText = (messageText ? messageText + ' ' : '') + `[语音: ${pendingAudioFilename}]`;
+            audioUrl = `/audio/${currentUser?.user_id || ''}/${pendingAudioFilename}`;
+        }
+
+        appendMessage('user', text || '(图片)', imageUrl, audioUrl);
+
+        // 清理
+        pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
+        pendingImages = [];
+        pendingAudioFilename = null;
+        renderImagePreviews();
+        inputEl.value = '';
+        inputEl.style.height = 'auto';
+
+        history.push({ role: "user", content: messageText });
 
         const typingDiv = document.createElement('div');
         typingDiv.className = 'message buddy typing';
@@ -2045,7 +2407,7 @@
             const res = await fetch('/chat', {
                 method: 'POST',
                 headers: getAuthHeaders(),
-                body: JSON.stringify({ content: text, history: history.slice(-10) })
+                body: JSON.stringify({ content: messageText, history: history.slice(-10) })
             });
             const data = await res.json();
 
@@ -2234,13 +2596,330 @@
         }
     }
 
+    // ==================== 图片上传功能 ====================
+
+    // 待发送的图片 {file, previewUrl, uploadedFilename, uploadedUrl}
+    let pendingImages = [];
+
+    function triggerImageUpload(target) {
+        const inputId = target === 'mobile' ? 'mobile-image-input' : 'desktop-image-input';
+        document.getElementById(inputId).click();
+    }
+
+    function handleImageSelect(event, target) {
+        const file = event.target.files[0];
+        if (!file) return;
+        addPendingImage(file, target);
+        event.target.value = ''; // reset so same file can be re-selected
+    }
+
+    function addPendingImage(file, target) {
+        if (pendingImages.length >= 1) {
+            // 只支持单张图片
+            removePendingImage(0);
+        }
+        const previewUrl = URL.createObjectURL(file);
+        pendingImages.push({ file, previewUrl, uploadedFilename: null, uploadedUrl: null });
+        renderImagePreviews();
+    }
+
+    function removePendingImage(index) {
+        if (pendingImages[index]) {
+            URL.revokeObjectURL(pendingImages[index].previewUrl);
+            pendingImages.splice(index, 1);
+        }
+        renderImagePreviews();
+    }
+
+    function renderImagePreviews() {
+        const targets = ['desktop', 'mobile'];
+        targets.forEach(t => {
+            const previewArea = document.getElementById(`${t}-image-preview-area`);
+            const previewContainer = document.getElementById(`${t}-image-preview`);
+            if (pendingImages.length === 0) {
+                previewArea.style.display = 'none';
+                previewContainer.innerHTML = '';
+                return;
+            }
+            previewArea.style.display = 'block';
+            previewContainer.innerHTML = '';
+            pendingImages.forEach((img, idx) => {
+                const item = document.createElement('div');
+                item.className = 'image-preview-item';
+                item.innerHTML = `
+                    <img src="${img.previewUrl}" alt="preview">
+                    <button class="image-preview-remove" onclick="removePendingImage(${idx})">x</button>
+                `;
+                previewContainer.appendChild(item);
+            });
+        });
+    }
+
+    // 粘贴图片支持
+    document.addEventListener('paste', function(e) {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                e.preventDefault();
+                const file = items[i].getAsFile();
+                if (file) {
+                    const target = isMobile() ? 'mobile' : 'desktop';
+                    addPendingImage(file, target);
+                }
+                break;
+            }
+        }
+    });
+
+    async function uploadPendingImage() {
+        if (pendingImages.length === 0) return null;
+        const img = pendingImages[0];
+        if (img.uploadedFilename) return img; // already uploaded
+
+        const formData = new FormData();
+        formData.append('file', img.file);
+
+        const res = await fetch('/upload-image', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authToken}` },
+            body: formData
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || '图片上传失败');
+        }
+
+        const data = await res.json();
+        img.uploadedFilename = data.filename;
+        img.uploadedUrl = data.url;
+        return img;
+    }
+
+    // ==================== 语音录制功能（直接录 WAV） ====================
+
+    let audioContext = null;
+    let audioStream = null;
+    let scriptProcessor = null;
+    let pcmBuffers = [];
+    let recordingStartTime = null;
+    let recordingTimer = null;
+    let recordingTarget = null;
+    let isRecording = false;
+    let recordingCancelled = false;
+    let pendingAudioFilename = null;  // 暂存语音文件名，发送时附带
+
+    function encodeWAV(samples, sampleRate) {
+        const buffer = new ArrayBuffer(44 + samples.length * 2);
+        const view = new DataView(buffer);
+        function writeStr(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
+        writeStr(0, 'RIFF');
+        view.setUint32(4, 36 + samples.length * 2, true);
+        writeStr(8, 'WAVE');
+        writeStr(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeStr(36, 'data');
+        view.setUint32(40, samples.length * 2, true);
+        for (let i = 0; i < samples.length; i++) {
+            let s = Math.max(-1, Math.min(1, samples[i]));
+            view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+        return new Blob([view], { type: 'audio/wav' });
+    }
+
+    function toggleRecording(target) {
+        if (isRecording) {
+            stopRecording(target);
+        } else {
+            startRecording(target);
+        }
+    }
+
+    async function startRecording(target) {
+        if (isRecording) return;
+
+        try {
+            audioStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            const source = audioContext.createMediaStreamSource(audioStream);
+            scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+            pcmBuffers = [];
+            recordingTarget = target;
+            recordingCancelled = false;
+
+            scriptProcessor.onaudioprocess = (e) => {
+                if (isRecording) {
+                    pcmBuffers.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+                }
+            };
+
+            source.connect(scriptProcessor);
+            scriptProcessor.connect(audioContext.destination);
+
+            isRecording = true;
+            recordingStartTime = Date.now();
+
+            const voiceBtn = document.getElementById(`${target}-voice-btn`);
+            voiceBtn.classList.add('recording');
+            const indicator = document.getElementById(`${target}-recording-indicator`);
+            indicator.classList.add('active');
+
+            recordingTimer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                document.getElementById(`${target}-recording-time`).textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+            }, 500);
+
+        } catch (e) {
+            console.error('无法访问麦克风:', e);
+            alert('无法访问麦克风，请检查权限设置');
+        }
+    }
+
+    async function stopRecording(target) {
+        if (!isRecording) return;
+        isRecording = false;
+        clearInterval(recordingTimer);
+
+        const t = target || recordingTarget;
+        document.getElementById(`${t}-voice-btn`).classList.remove('recording');
+        document.getElementById(`${t}-recording-indicator`).classList.remove('active');
+
+        if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
+        if (audioStream) { audioStream.getTracks().forEach(t => t.stop()); audioStream = null; }
+
+        if (recordingCancelled || pcmBuffers.length === 0) return;
+
+        // 合并 PCM 数据并编码为 WAV
+        let totalLen = 0;
+        pcmBuffers.forEach(b => totalLen += b.length);
+        const merged = new Float32Array(totalLen);
+        let offset = 0;
+        pcmBuffers.forEach(b => { merged.set(b, offset); offset += b.length; });
+
+        const sampleRate = audioContext ? audioContext.sampleRate : 16000;
+        if (audioContext) { audioContext.close(); audioContext = null; }
+
+        const wavBlob = encodeWAV(merged, sampleRate);
+        await transcribeAudio(wavBlob);
+    }
+
+    function cancelRecording() {
+        recordingCancelled = true;
+        stopRecording(recordingTarget);
+    }
+
+    async function transcribeAudio(audioBlob) {
+        const inputEl = isMobile() ? document.getElementById('mobile-user-input') : userInput;
+
+        const originalPlaceholder = inputEl.placeholder;
+        inputEl.placeholder = '语音识别中...';
+        inputEl.disabled = true;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'recording.wav');
+
+            const res = await fetch('/transcribe', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                body: formData
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || '语音识别失败');
+            }
+
+            const data = await res.json();
+            if (data.text) {
+                // 插入转写文本，语音文件名暂存不显示在文本框
+                if (inputEl.value) {
+                    inputEl.value += ' ' + data.text;
+                } else {
+                    inputEl.value = data.text;
+                }
+                if (data.audio_filename) {
+                    pendingAudioFilename = data.audio_filename;
+                }
+                autoResize(inputEl);
+            }
+        } catch (e) {
+            console.error('语音识别失败:', e);
+            alert('语音识别失败: ' + e.message);
+        } finally {
+            inputEl.placeholder = originalPlaceholder;
+            inputEl.disabled = false;
+            inputEl.focus();
+        }
+    }
+
+    // ==================== 语音播放 ====================
+    let currentVoiceAudio = null;
+    let currentVoicePlayer = null;
+
+    function toggleVoicePlay(el) {
+        const src = el.dataset.src;
+
+        // 如果点击的是正在播放的，暂停
+        if (currentVoicePlayer === el && currentVoiceAudio && !currentVoiceAudio.paused) {
+            currentVoiceAudio.pause();
+            el.classList.remove('playing');
+            el.querySelector('.voice-icon').innerHTML = '&#9654;';
+            return;
+        }
+
+        // 停止之前的播放
+        if (currentVoiceAudio) {
+            currentVoiceAudio.pause();
+            if (currentVoicePlayer) {
+                currentVoicePlayer.classList.remove('playing');
+                currentVoicePlayer.querySelector('.voice-icon').innerHTML = '&#9654;';
+            }
+        }
+
+        // 开始新的播放
+        currentVoiceAudio = new Audio(src);
+        currentVoicePlayer = el;
+        el.classList.add('playing');
+        el.querySelector('.voice-icon').innerHTML = '&#9646;&#9646;';
+
+        currentVoiceAudio.onended = () => {
+            el.classList.remove('playing');
+            el.querySelector('.voice-icon').innerHTML = '&#9654;';
+            currentVoiceAudio = null;
+            currentVoicePlayer = null;
+        };
+
+        currentVoiceAudio.play();
+    }
+
+    // ==================== 图片全屏查看 ====================
+
+    function openImageFullscreen(src) {
+        document.getElementById('fullscreen-image').src = src;
+        document.getElementById('image-fullscreen').classList.add('active');
+    }
+
+    function closeImageFullscreen() {
+        document.getElementById('image-fullscreen').classList.remove('active');
+    }
+
     // 监听窗口大小变化
     window.addEventListener('resize', () => {
         if (!isMobile() && mobileReaderView.style.display === 'flex') {
             mobileReaderView.style.display = 'none';
         }
     });
-    
+
     // 页面加载完成后初始化
     document.addEventListener('DOMContentLoaded', initApp);
 </script>

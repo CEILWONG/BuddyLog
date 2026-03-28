@@ -1,3 +1,4 @@
+import os
 import json
 import datetime
 from typing import Dict, Any, Optional
@@ -11,7 +12,7 @@ from src.utils.file_utils import (
     extract_profile_without_persona
 )
 import dashscope
-from dashscope import Generation
+from dashscope import Generation, MultiModalConversation
 
 
 class ChatService:
@@ -79,32 +80,94 @@ class ChatService:
 
         return system_prompt
     
+    def _has_image_reference(self, content: str) -> bool:
+        """检查消息内容是否包含图片引用"""
+        import re
+        return bool(re.search(r'\[图片:\s*\S+\]', content))
+
+    def _extract_image_info(self, content: str, user_email: str = None):
+        """从消息中提取图片路径和纯文本"""
+        import re
+        from src.utils.file_utils import DATA_DIR
+        from src.utils.user_utils import get_user_id_by_email
+
+        image_pattern = r'\[图片:\s*(\S+)\]'
+        matches = re.findall(image_pattern, content)
+        text = re.sub(image_pattern, '', content).strip()
+
+        image_paths = []
+        if matches and user_email:
+            user_id = get_user_id_by_email(user_email)
+            if user_id:
+                for filename in matches:
+                    filepath = os.path.join(DATA_DIR, "users", user_id, "images", filename)
+                    if os.path.exists(filepath):
+                        image_paths.append(filepath)
+
+        return text, image_paths
+
     def generate_response(self, content: str, history: list, user_email: str = None) -> Dict[str, Any]:
         """生成聊天响应"""
         # 构建系统提示
         system_prompt = self.build_system_prompt(user_email)
-        
+
+        # 检查是否包含图片 -> 使用多模态模型
+        has_image = self._has_image_reference(content)
+
         # 构建消息数组，保留完整对话历史（让MOSS理解上下文逻辑）
         valid_history = [msg for msg in history if msg.get("content")]
-        messages = [
-            {"role": "system", "content": system_prompt},
-            *valid_history[-10:],  # 最近10轮对话
-            {"role": "user", "content": content}
-        ]
-        
+
+        print(f"[Chat] content='{content[:80]}', has_image={has_image}")
+        if has_image:
+            # 多模态消息：使用 qwen-vl-max
+            text, image_paths = self._extract_image_info(content, user_email)
+            print(f"[Chat] Multimodal mode: text='{text}', image_paths={image_paths}")
+            user_content = []
+            for img_path in image_paths:
+                user_content.append({"image": f"file://{img_path}"})
+            user_content.append({"text": text if text else "请描述这张图片"})
+
+            messages = [
+                {"role": "system", "content": [{"text": system_prompt}]},
+                *[{"role": m["role"], "content": [{"text": m["content"]}]} for m in valid_history[-10:]],
+                {"role": "user", "content": user_content}
+            ]
+            model = "qwen-vl-max"
+        else:
+            messages = [
+                {"role": "system", "content": system_prompt},
+                *valid_history[-10:],  # 最近10轮对话
+                {"role": "user", "content": content}
+            ]
+            model = self.model
+
         # 调用API
-        response = Generation.call(
-            api_key=dashscope.api_key,
-            model=self.model,
-            messages=messages,
-            result_format="message",
-            enable_search=False,
-            enable_thinking=False
-        )
-        
+        if has_image:
+            response = MultiModalConversation.call(
+                api_key=dashscope.api_key,
+                model=model,
+                messages=messages,
+            )
+        else:
+            response = Generation.call(
+                api_key=dashscope.api_key,
+                model=model,
+                messages=messages,
+                result_format="message",
+                enable_search=False,
+                enable_thinking=False,
+            )
+
+        print(f"[Chat] API response status={response.status_code}, model={model}")
         if response.status_code == 200:
             # 提取回复内容
-            content = response.output.choices[0].message.content
+            if has_image:
+                # MultiModalConversation 返回格式不同
+                raw_content = response.output.choices[0].message.content
+                print(f"[Chat] Multimodal raw response: {raw_content}")
+                content = raw_content[0]["text"] if isinstance(raw_content, list) else raw_content
+            else:
+                content = response.output.choices[0].message.content
             # 清理可能的 Markdown 代码块标记
             if content.startswith("```json"):
                 content = content[7:]

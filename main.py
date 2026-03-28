@@ -1,8 +1,10 @@
 import os
 import io
+import uuid
 import zipfile
+import tempfile
 from datetime import datetime, date
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from dotenv import load_dotenv
@@ -309,6 +311,182 @@ async def export_data(current_email: str = Depends(get_current_user)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")
+
+
+# ==================== 图片上传与语音转写 ====================
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+def _get_user_images_dir(user_email: str) -> str:
+    """获取用户图片目录"""
+    from src.utils.user_utils import get_user_data_dir
+    user_dir = get_user_data_dir(user_email)
+    if not user_dir:
+        raise HTTPException(status_code=500, detail="用户目录不存在")
+    images_dir = os.path.join(user_dir, "images")
+    os.makedirs(images_dir, exist_ok=True)
+    return images_dir
+
+
+@app.post("/upload-image")
+async def upload_image(file: UploadFile = File(...), current_email: str = Depends(get_current_user)):
+    """上传图片"""
+    # 验证文件类型
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="不支持的图片格式，请上传 JPG/PNG/GIF/WebP")
+
+    # 读取文件内容
+    content = await file.read()
+    if len(content) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=400, detail="图片大小不能超过 10MB")
+
+    # 生成唯一文件名
+    ext = os.path.splitext(file.filename or "image.jpg")[1] or ".jpg"
+    filename = f"{uuid.uuid4().hex[:12]}{ext}"
+
+    # 保存到用户图片目录
+    from src.utils.user_utils import get_user_id_by_email
+    user_id = get_user_id_by_email(current_email)
+    if not user_id:
+        raise HTTPException(status_code=500, detail="用户不存在")
+
+    images_dir = _get_user_images_dir(current_email)
+    filepath = os.path.join(images_dir, filename)
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    return {"filename": filename, "url": f"/images/{user_id}/{filename}"}
+
+
+@app.get("/images/{user_id}/{filename}")
+async def get_image(user_id: str, filename: str):
+    """提供图片访问"""
+    from src.utils.file_utils import DATA_DIR
+    images_dir = os.path.join(DATA_DIR, "users", user_id, "images")
+    filepath = os.path.join(images_dir, filename)
+
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="图片不存在")
+
+    # 安全检查：防止路径遍历
+    real_path = os.path.realpath(filepath)
+    real_images = os.path.realpath(images_dir)
+    if not real_path.startswith(real_images):
+        raise HTTPException(status_code=403, detail="禁止访问")
+
+    return FileResponse(filepath)
+
+
+@app.get("/audio/{user_id}/{filename}")
+async def get_audio(user_id: str, filename: str):
+    """提供音频访问"""
+    from src.utils.file_utils import DATA_DIR
+    audio_dir = os.path.join(DATA_DIR, "users", user_id, "audio")
+    filepath = os.path.join(audio_dir, filename)
+
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="音频不存在")
+
+    real_path = os.path.realpath(filepath)
+    real_audio = os.path.realpath(audio_dir)
+    if not real_path.startswith(real_audio):
+        raise HTTPException(status_code=403, detail="禁止访问")
+
+    return FileResponse(filepath, media_type="audio/wav")
+
+
+@app.post("/transcribe")
+async def transcribe_audio(file: UploadFile = File(...), current_email: str = Depends(get_current_user)):
+    """语音转文字"""
+    try:
+        import threading
+        from dashscope.audio.asr import Recognition, RecognitionCallback
+
+        # 读取音频数据
+        audio_data = await file.read()
+        if len(audio_data) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="音频文件不能超过 25MB")
+
+        # 前端已直接录制 WAV 格式，无需转换
+        fmt = "wav"
+
+        # 保存录音文件到用户目录
+        from src.utils.user_utils import get_user_id_by_email
+        user_id = get_user_id_by_email(current_email)
+        audio_filename = None
+        audio_url = None
+        if user_id:
+            audio_dir = os.path.join(
+                os.getenv("DATA_DIR", os.path.join(os.path.dirname(__file__), "data")),
+                "users", user_id, "audio"
+            )
+            os.makedirs(audio_dir, exist_ok=True)
+            audio_filename = f"{uuid.uuid4().hex[:12]}.wav"
+            audio_filepath = os.path.join(audio_dir, audio_filename)
+            with open(audio_filepath, "wb") as af:
+                af.write(audio_data)
+            audio_url = f"/audio/{user_id}/{audio_filename}"
+
+        # 使用 Recognition + callback 模式进行语音识别
+        class TranscribeCallback(RecognitionCallback):
+            def __init__(self):
+                self.texts = []
+                self.done = threading.Event()
+                self.error_msg = None
+
+            def on_event(self, result):
+                sentence = result.get_sentence()
+                if sentence and "text" in sentence:
+                    # 只在句子结束时收集（避免重复）
+                    if sentence.get("end_time") is not None:
+                        self.texts.append(sentence["text"])
+
+            def on_complete(self):
+                self.done.set()
+
+            def on_error(self, result):
+                self.error_msg = str(result)
+                self.done.set()
+
+            def on_close(self):
+                self.done.set()
+
+        cb = TranscribeCallback()
+        recognition = Recognition(
+            model='paraformer-realtime-v2',
+            callback=cb,
+            format=fmt,
+            sample_rate=16000,
+        )
+        recognition.start()
+        recognition.send_audio_frame(audio_data)
+        import time
+        time.sleep(0.5)  # 给服务端处理时间
+        recognition.stop()
+
+        # 等待识别完成（最多30秒）
+        cb.done.wait(timeout=30)
+
+        if cb.error_msg:
+            print(f"Transcription failed: {cb.error_msg}")
+            raise HTTPException(status_code=500, detail=f"语音识别失败: {cb.error_msg}")
+
+        text = "".join(cb.texts)
+        result = {"text": text}
+        if audio_url:
+            result["audio_url"] = audio_url
+            result["audio_filename"] = audio_filename
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in transcribe: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"语音识别服务异常: {str(e)}")
 
 
 if __name__ == "__main__":
