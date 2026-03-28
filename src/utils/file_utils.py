@@ -295,18 +295,52 @@ def _extract_conversation_from_draft(content: str) -> list:
     conversation = []
     user_msg = None
     user_time = None
-    for line in content.split('\n'):
+    buddy_lines = []
+    buddy_time = None
+    
+    lines = content.split('\n')
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         user_match = re.search(r'\*\*\[(\d{2}:\d{2}:\d{2})\] 用户\*\*: (.+)', line)
         buddy_match = re.search(r'\*\*\[(\d{2}:\d{2}:\d{2})\] Buddy\*\*: (.+)', line)
+        
         if user_match:
+            # 如果之前有未完成的对话，先保存
+            if user_msg and buddy_lines:
+                conversation.append({"role": "user", "content": user_msg, "time": user_time})
+                conversation.append({"role": "assistant", "content": '\n'.join(buddy_lines), "time": buddy_time})
+            # 开始新的对话轮次
             user_time = user_match.group(1)
             user_msg = user_match.group(2)
+            buddy_lines = []
+            buddy_time = None
         elif buddy_match and user_msg:
+            # 开始收集Buddy的多行回复
             buddy_time = buddy_match.group(1)
+            buddy_lines = [buddy_match.group(2)]
+            # 继续读取后续行，直到遇到下一个用户消息或空行分隔
+            i += 1
+            while i < len(lines):
+                next_line = lines[i]
+                # 如果遇到下一个用户消息或Buddy消息，停止收集
+                if re.search(r'\*\*\[\d{2}:\d{2}:\d{2}\] (用户|Buddy)\*\*:', next_line):
+                    i -= 1  # 回退一行，让外层循环处理
+                    break
+                # 收集非空行
+                if next_line.strip():
+                    buddy_lines.append(next_line)
+                i += 1
+            # 保存当前对话轮次
             conversation.append({"role": "user", "content": user_msg, "time": user_time})
-            conversation.append({"role": "assistant", "content": buddy_match.group(2), "time": buddy_time})
+            conversation.append({"role": "assistant", "content": '\n'.join(buddy_lines), "time": buddy_time})
+            # 重置状态
             user_msg = None
             user_time = None
+            buddy_lines = []
+            buddy_time = None
+        i += 1
+    
     return conversation
 
 
