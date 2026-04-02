@@ -1329,7 +1329,7 @@
         <div id="input-area">
             <textarea id="user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
             <button onclick="sendMessage()" id="send-btn" class="btn-primary">发送</button>
-            <button onclick="completeToday()" id="complete-btn" class="btn-secondary">完成今日</button>
+            <button onclick="completeToday()" id="complete-btn" class="btn-secondary">归档</button>
         </div>
     </div>
     
@@ -1369,7 +1369,7 @@
         <div id="input-area">
             <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
             <button onclick="sendMessage()" id="mobile-send-btn" class="btn-primary">发送</button>
-            <button onclick="completeToday()" id="mobile-complete-btn" class="btn-secondary">完成</button>
+            <button onclick="completeToday()" id="mobile-complete-btn" class="btn-secondary">归档</button>
         </div>
     </div>
     
@@ -1693,6 +1693,9 @@
 
                 // 加载日记列表
                 loadFiles();
+                
+                // 加载今天的草稿对话记录，恢复聊天历史
+                await loadTodayDraft();
             } else {
                 // Token 无效，清除并重新登录
                 logout();
@@ -1758,10 +1761,8 @@
 
     // 处理键盘事件
     function handleKeyDown(event) {
-        if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
-            sendMessage();
-        }
+        // 回车键默认行为是换行，不再拦截发送
+        // 如需发送，请点击发送按钮
     }
 
     // 桌面端：显示聊天视图
@@ -1868,6 +1869,51 @@
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/^> (.*)$/gm, '<blockquote style="margin: 8px 0; padding: 8px 12px; border-left: 3px solid #fab1a0; background: #fff5f5; border-radius: 0 8px 8px 0;">$1</blockquote>')
             .replace(/\n/g, '<br>');
+    }
+
+    // 加载今天的草稿对话记录，恢复聊天历史
+    async function loadTodayDraft() {
+        try {
+            const res = await fetch('/today-draft', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const data = await res.json();
+            
+            if (data.conversation && data.conversation.length > 0) {
+                // 清空欢迎消息
+                const desktopChatBox = document.getElementById('chat-box');
+                const mobileChatBox = document.querySelector('#mobile-chat-view #chat-box');
+                
+                if (desktopChatBox) desktopChatBox.innerHTML = '';
+                if (mobileChatBox) mobileChatBox.innerHTML = '';
+                
+                // 恢复对话记录到聊天框和 history
+                history = [];
+                for (const msg of data.conversation) {
+                    if (msg.role === 'user') {
+                        appendMessage('user', msg.content);
+                        history.push({ role: "user", content: msg.content });
+                    } else if (msg.role === 'assistant') {
+                        appendMessage('buddy', msg.content);
+                        history.push({ role: "assistant", content: msg.content });
+                    }
+                }
+                
+                // 添加恢复提示
+                const targetChatBox = isMobile() ? mobileChatBox : desktopChatBox;
+                if (targetChatBox) {
+                    const note = document.createElement('div');
+                    note.className = 'system-note';
+                    note.style.fontStyle = 'italic';
+                    note.style.opacity = '0.6';
+                    note.innerText = '◉ 已恢复今日对话记录';
+                    targetChatBox.appendChild(note);
+                    targetChatBox.scrollTop = targetChatBox.scrollHeight;
+                }
+            }
+        } catch (e) {
+            console.error('加载今日草稿失败:', e);
+        }
     }
 
     // 加载文件列表（桌面端）
@@ -2048,11 +2094,19 @@
                 body: JSON.stringify({ content: text, history: history.slice(-10) })
             });
             const data = await res.json();
-
+            
             const typingEl = document.getElementById('typing-indicator');
             if (typingEl) typingEl.remove();
 
             const targetChatBox = isMobile() ? document.querySelector('#mobile-chat-view #chat-box') : chatBox;
+
+            // 处理错误响应（如 429 超限）
+            if (!res.ok) {
+                const errorMsg = data.detail || '服务暂时不可用';
+                appendMessage('buddy', `◉ ${errorMsg}`);
+                targetChatBox.scrollTop = targetChatBox.scrollHeight;
+                return;
+            }
 
             appendMessage('buddy', data.reply);
 

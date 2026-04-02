@@ -6,13 +6,22 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from dotenv import load_dotenv
-import dashscope
+from openai import OpenAI
 
 # 加载配置
 load_dotenv()
-dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
-dashscope.base_http_api_url = "https://dashscope.aliyuncs.com/api/v1"
+
+# OpenAI 格式配置 - 支持任意兼容 OpenAI API 的提供商
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 MODEL = os.getenv("MODEL_NAME", "qwen-plus")
+ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").lower() == "true"
+
+# 创建 OpenAI 客户端
+openai_client = OpenAI(
+    api_key=OPENAI_API_KEY,
+    base_url=OPENAI_BASE_URL
+)
 
 # IP 注册限制缓存：{ip: {日期: 次数}}
 ip_register_cache = {}
@@ -50,8 +59,8 @@ app.add_middleware(
 )
 
 # 初始化服务
-archive_service = ArchiveService(MODEL)
-chat_service = ChatService(MODEL, archive_service)
+archive_service = ArchiveService(MODEL, openai_client, enable_thinking=ENABLE_THINKING)
+chat_service = ChatService(MODEL, openai_client, archive_service, enable_thinking=ENABLE_THINKING)
 
 
 # ==================== 认证路由 ====================
@@ -203,6 +212,25 @@ async def chat(msg: Message, current_email: str = Depends(get_current_user)):
 async def list_files(current_email: str = Depends(get_current_user)):
     """获取已有的日记文件列表"""
     return list_diary_files(current_email)
+
+
+@app.get("/today-draft")
+async def get_today_draft(current_email: str = Depends(get_current_user)):
+    """获取今天的草稿对话记录，用于恢复聊天历史"""
+    from src.utils.file_utils import get_today_draft_file, _extract_conversation_from_draft
+    
+    draft_path = get_today_draft_file(current_email)
+    if not draft_path or not os.path.exists(draft_path):
+        return {"conversation": []}
+    
+    try:
+        with open(draft_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        conversation = _extract_conversation_from_draft(content)
+        return {"conversation": conversation}
+    except Exception as e:
+        print(f"Error reading today draft: {e}")
+        return {"conversation": []}
 
 
 @app.get("/file/{filename}")

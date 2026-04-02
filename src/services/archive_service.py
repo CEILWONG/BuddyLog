@@ -3,6 +3,7 @@ import os
 from typing import Dict, List, Any
 from datetime import date
 import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.utils.file_utils import (
     finalize_diary, 
     get_today_draft_file, 
@@ -10,16 +11,17 @@ from src.utils.file_utils import (
     _extract_conversation_from_draft
 )
 from src.services.memory_service import MemoryService
-import dashscope
-from dashscope import Generation
+from openai import OpenAI
 
 
 class ArchiveService:
     """归档服务类"""
     
-    def __init__(self, model: str):
+    def __init__(self, model: str, openai_client: OpenAI = None, enable_thinking: bool = False):
         self.model = model
-        self.memory_service = MemoryService(model)
+        self.openai_client = openai_client
+        self.enable_thinking = enable_thinking
+        self.memory_service = MemoryService(model, openai_client, enable_thinking)
     
     def extract_structured_data(self, conversation: list) -> Dict[str, List[str]]:
         """从对话中提取结构化信息"""
@@ -47,19 +49,20 @@ class ArchiveService:
             {"role": "user", "content": conversation_text}
         ]
         
-        extraction_response = Generation.call(
-            api_key=dashscope.api_key,
-            model=self.model,
-            messages=extraction_messages,
-            result_format="message",
-            enable_search=False,
-            enable_thinking=False
-        )
+        # 调用API (OpenAI 格式)
+        # 构建 extra_body 参数（明确传递 enable_thinking 控制深度思考）
+        extra_body = {"enable_thinking": self.enable_thinking}
         
-        if extraction_response.status_code != 200:
-            raise Exception(f"API request failed: {extraction_response.message}")
+        try:
+            extraction_response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=extraction_messages,
+                extra_body=extra_body
+            )
+        except Exception as e:
+            raise Exception(f"API request failed: {str(e)}")
         
-        structured_data = json.loads(extraction_response.output.choices[0].message.content)
+        structured_data = json.loads(extraction_response.choices[0].message.content)
         return structured_data
     
     def generate_diary_article(self, conversation: list, date_str: str = None) -> str:
@@ -74,40 +77,60 @@ class ArchiveService:
         ]
         user_text = "\n".join(user_messages) if user_messages else "今日无记录"
 
-        article_prompt = f"""你是一位积极心理学家，专门负责观察用户的日志和成长。
+        article_prompt = f"""你是一位忠实的记录者，帮助用户整理当天的日记。请基于用户的真实发言，写出一篇简洁、真实的日记。
 
 【日期】{date_str}
 
 【用户的今日发言】
 {user_text}
 
-请生成一篇日志总结，要求：
-1. 使用第三人称（"用户今天..."），客观描述用户的一天
-2. 主要基于用户的发言内容，buddy的回应仅作参考
-3. 核心内容简洁，语言流畅，不遗漏内容，方便日后快速回顾当天发生了什么
-4. 最后从积极心理学和成长学角度，给用户几句正面且有价值的评价总结
+【写作要求】
+1. **叙事视角**：使用第三人称（"TA今天..."），像一位朋友在客观记录TA的一天
+2. **内容原则**：
+   - 只记录用户真实提到的事情，不要添加虚构内容
+   - 不要过度解读或揣测用户的想法
+   - 不要编造场景、对话或细节
+   - 保持真实，像用户自己写的日记一样朴素
+3. **语言风格**：
+   - 简洁、自然、口语化
+   - 避免华丽的辞藻和文学修饰
+   - 像普通人写日记一样，平实记录当天
+4. **内容组织**：
+   - 按时间顺序或事件顺序记录
+   - 保留用户提到的关键信息和感受
+   - 不遗漏重要内容，但也不刻意扩充
 
-格式：
-【今日概览】简洁描述用户当天的日记内容
-【AI评价】正面评价和建议"""
+【结构建议】（必须严格使用以下标题格式）
+
+**【日记文章】**
+用第三人称（"TA今天..."）记录今天发生的事情，200-300字左右，真实、简洁即可。
+
+**【AI评价】**
+作为用户最铁的朋友，用充满情绪价值的方式回应用户今天的一天，150-250字。要求：
+- 大力夸赞用户今天做的事情，哪怕很普通的事也要找到闪光点
+- 对用户今天的辛苦、努力、坚持给予真诚的认可和鼓励
+- 如果用户提到了烦恼或困难，先共情、再鼓励，让TA感受到被理解
+- 语气要热情、真诚，像一个超级支持你的好朋友
+- 可以适当用一些感叹词增加感染力，让人读完心情变好"""
 
         article_messages = [
             {"role": "system", "content": article_prompt}
         ]
 
-        article_response = Generation.call(
-            api_key=dashscope.api_key,
-            model=self.model,
-            messages=article_messages,
-            result_format="message",
-            enable_search=False,
-            enable_thinking=False
-        )
+        # 调用API (OpenAI 格式)
+        # 构建 extra_body 参数（明确传递 enable_thinking 控制深度思考）
+        extra_body = {"enable_thinking": self.enable_thinking}
+        
+        try:
+            article_response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=article_messages,
+                extra_body=extra_body
+            )
+        except Exception as e:
+            raise Exception(f"API request failed: {str(e)}")
 
-        if article_response.status_code != 200:
-            raise Exception(f"API request failed: {article_response.message}")
-
-        diary_article = article_response.output.choices[0].message.content
+        diary_article = article_response.choices[0].message.content
         return diary_article
     
     def archive(self, conversation: list, draft_date: date = None, delete_draft: bool = False,
@@ -134,13 +157,15 @@ class ArchiveService:
         # structured_data = self.extract_structured_data(conversation)
         structured_data = {"events": [], "people": [], "emotions": [], "ideas": []}
         
+        # 生成日记文章（必须等待完成，用于保存文件）
         diary_article = self.generate_diary_article(conversation, date_str)
         
         filename = finalize_diary(structured_data, conversation, diary_article, 
                                   draft_date=draft_date, delete_draft=delete_draft,
                                   user_email=user_email)
         
-        self.memory_service.update_memory(conversation, date_str, user_email)
+        # 长期记忆更新改为后台异步执行（不阻塞前端响应）
+        self._background_update_memory(conversation, date_str, user_email)
         
         return {
             "success": True,
@@ -148,6 +173,21 @@ class ArchiveService:
             "structured_data": structured_data,
             "diary_article": diary_article
         }
+    
+    def _background_update_memory(self, conversation: list, date_str: str, user_email: str = None):
+        """后台异步更新长期记忆（不阻塞主流程）"""
+        def update_task():
+            try:
+                self.memory_service.update_memory(conversation, date_str, user_email)
+                print(f"[Background] Memory update completed for user: {user_email}, date: {date_str}")
+            except Exception as e:
+                print(f"[Background] Memory update failed for user {user_email}: {e}")
+        
+        # 使用线程池后台执行
+        import threading
+        thread = threading.Thread(target=update_task, name=f"memory_update_{user_email}")
+        thread.daemon = True
+        thread.start()
     
     def process_archive(self, conversation: list = None, user_email: str = None) -> Dict[str, Any]:
         """手动归档今日（点击"完成今日"按钮）"""

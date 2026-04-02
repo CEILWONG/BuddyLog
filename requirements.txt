@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 python-dotenv
-dashscope
+openai
 python-jose[cryptography]
 python-multipart
 email-validator

@@ -1,13 +1,14 @@
 from src.utils.file_utils import load_memory, update_memory_file
-import dashscope
-from dashscope import Generation
+from openai import OpenAI
 
 
 class MemoryService:
     """记忆服务类"""
     
-    def __init__(self, model: str):
+    def __init__(self, model: str, openai_client: OpenAI = None, enable_thinking: bool = False):
         self.model = model
+        self.openai_client = openai_client
+        self.enable_thinking = enable_thinking
     
     def update_memory(self, conversation: list, date_str: str, user_email: str = None):
         """更新长期记忆，融合新的对话内容"""
@@ -81,19 +82,19 @@ class MemoryService:
             {"role": "system", "content": memory_prompt}
         ]
         
-        memory_response = Generation.call(
-            api_key=dashscope.api_key,
-            model=self.model,
-            messages=memory_messages,
-            result_format="message",
-            enable_search=False,
-            enable_thinking=False
-        )
+        # 调用API (OpenAI 格式)
+        # 构建 extra_body 参数（明确传递 enable_thinking 控制深度思考）
+        extra_body = {"enable_thinking": self.enable_thinking}
         
-        if memory_response.status_code == 200:
-            new_memory = memory_response.output.choices[0].message.content
+        try:
+            memory_response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=memory_messages,
+                extra_body=extra_body
+            )
+            new_memory = memory_response.choices[0].message.content
             # 写入新记忆
             update_memory_file(new_memory, user_email)
             print(f"Memory updated successfully for user: {user_email}")
-        else:
-            print(f"Failed to update memory for user {user_email}: {memory_response.message}")
+        except Exception as e:
+            print(f"Failed to update memory for user {user_email}: {str(e)}")

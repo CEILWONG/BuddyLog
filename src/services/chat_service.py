@@ -10,16 +10,17 @@ from src.utils.file_utils import (
     extract_agent_persona,
     extract_profile_without_persona
 )
-import dashscope
-from dashscope import Generation
+from openai import OpenAI
 
 
 class ChatService:
     """聊天服务类"""
     
-    def __init__(self, model: str, archive_service=None):
+    def __init__(self, model: str, openai_client: OpenAI, archive_service=None, enable_thinking: bool = False):
         self.model = model
+        self.openai_client = openai_client
         self.archive_service = archive_service
+        self.enable_thinking = enable_thinking
         # 后台归档线程池（单线程，确保顺序执行）
         self._archive_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="archive_worker")
     
@@ -92,49 +93,63 @@ class ChatService:
             {"role": "user", "content": content}
         ]
         
-        # 调用API
-        response = Generation.call(
-            api_key=dashscope.api_key,
-            model=self.model,
-            messages=messages,
-            result_format="message",
-            enable_search=False,
-            enable_thinking=False
-        )
+        # 调用API (OpenAI 格式)
+        # 构建 extra_body 参数（明确传递 enable_thinking 控制深度思考）
+        extra_body = {"enable_thinking": self.enable_thinking}
         
-        if response.status_code == 200:
-            # 提取回复内容
-            content = response.output.choices[0].message.content
-            # 清理可能的 Markdown 代码块标记
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.startswith("```"):
-                content = content[3:]
-            if content.endswith("```"):
-                content = content[:-3]
-            content = content.strip()
-            # 解析 JSON 响应
-            try:
-                result = json.loads(content)
-            except json.JSONDecodeError:
-                # 如果解析失败，将内容包装为 reply 字段
-                result = {"reply": content}
-            
-            # 获取 token 使用量
-            usage = response.usage if hasattr(response, 'usage') else None
-            if usage:
-                input_tokens = usage.input_tokens if hasattr(usage, 'input_tokens') else 0
-                output_tokens = usage.output_tokens if hasattr(usage, 'output_tokens') else 0
-                total_tokens = usage.total_tokens if hasattr(usage, 'total_tokens') else (input_tokens + output_tokens)
-                result['tokens'] = {
-                    'input': input_tokens,
-                    'output': output_tokens,
-                    'total': total_tokens
-                }
-            
-            return result
-        else:
-            raise Exception(f"API request failed: {response.message}")
+        try:
+            response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                extra_body=extra_body
+            )
+        except Exception as e:
+            raise Exception(f"API request failed: {str(e)}")
+        
+        # 提取回复内容
+        raw_content = response.choices[0].message.content
+        
+        # 清理可能的 Markdown 代码块标记
+        content = raw_content
+        if content.startswith("```json"):
+            content = content[7:]
+        elif content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+        
+        # 解析 JSON 响应
+        result = None
+        try:
+            result = json.loads(content)
+            # 确保 result 是字典且有 reply 字段
+            if not isinstance(result, dict) or "reply" not in result:
+                result = {"reply": content if not isinstance(result, dict) else str(result)}
+        except json.JSONDecodeError:
+            # 如果解析失败，尝试提取 reply 字段的内容（处理模型返回不完整 JSON 的情况）
+            import re
+            # 尝试匹配 {"reply": "..."} 格式的内容
+            match = re.search(r'"reply"\s*:\s*"(.*)"\s*}', content, re.DOTALL)
+            if match:
+                result = {"reply": match.group(1)}
+            else:
+                # 完全无法解析，将原始内容作为 reply
+                result = {"reply": raw_content}
+        
+        # 获取 token 使用量
+        usage = response.usage
+        if usage:
+            input_tokens = usage.prompt_tokens or 0
+            output_tokens = usage.completion_tokens or 0
+            total_tokens = usage.total_tokens or (input_tokens + output_tokens)
+            result['tokens'] = {
+                'input': input_tokens,
+                'output': output_tokens,
+                'total': total_tokens
+            }
+        
+        return result
     
     def _background_archive(self, user_email: str = None):
         """后台执行归档（不阻塞主流程）"""
