@@ -1761,8 +1761,19 @@
 
     // 处理键盘事件
     function handleKeyDown(event) {
-        // 回车键默认行为是换行，不再拦截发送
-        // 如需发送，请点击发送按钮
+        // 检测是否为移动端（屏幕宽度小于 768px 或存在 touch 事件支持）
+        const isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
+        
+        if (event.key === 'Enter' && !event.shiftKey) {
+            if (isMobile) {
+                // 移动端：回车键默认换行，不拦截
+                return;
+            } else {
+                // 电脑端：回车键发送消息
+                event.preventDefault();
+                sendMessage();
+            }
+        }
     }
 
     // 桌面端：显示聊天视图

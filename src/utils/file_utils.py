@@ -245,22 +245,21 @@ def _write_diary_file(filepath: str, date_str: str, idx: int, structured_data: d
             # 移除 **【日记文章】** 标题（如果存在）
             story_part = story_part.replace('**【日记文章】**', '').strip()
             
+            # 去除多余空行（连续多个换行合并为单个）
+            import re
+            story_part = re.sub(r'\n{2,}', '\n\n', story_part)
+            comment_part = re.sub(r'\n{2,}', '\n\n', comment_part)
+            
             styled_article = f"""## 日记文章
 
-<div style="background: linear-gradient(135deg, #fff5f5 0%, #ffeee8 100%); padding: 24px; border-radius: 12px; border-left: 4px solid #fd79a8; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin: 16px 0;">
-
-<h3 style="margin-top: 0; color: #d63031; font-weight: bold;">**【日记文章】**</h3>
-
+<div style="background: linear-gradient(135deg, #fff5f5 0%, #ffeee8 100%); padding: 20px; border-radius: 12px; border-left: 4px solid #fd79a8; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin: 12px 0;">
+<h3 style="margin-top: 0; margin-bottom: 12px; color: #d63031; font-weight: bold;">**【日记文章】**</h3>
 {story_part}
-
 </div>
 
-<div style="background: linear-gradient(135deg, #f0f8ff 0%, #e8f4f8 100%); padding: 24px; border-radius: 12px; border-left: 4px solid #74b9ff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin: 16px 0;">
-
-<h3 style="margin-top: 0; color: #0984e3; font-weight: bold;">**【AI评价】**</h3>
-
+<div style="background: linear-gradient(135deg, #f0f8ff 0%, #e8f4f8 100%); padding: 20px; border-radius: 12px; border-left: 4px solid #74b9ff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin: 12px 0;">
+<h3 style="margin-top: 0; margin-bottom: 12px; color: #0984e3; font-weight: bold;">**【AI评价】**</h3>
 {comment_part}
-
 </div>
 
 ---
