@@ -163,6 +163,14 @@ class ArchiveService:
                                   draft_date=draft_date, delete_draft=delete_draft,
                                   user_email=user_email)
         
+        # 更新每日对话统计（用于热力图）
+        try:
+            from src.utils.file_utils import update_daily_stats_for_date
+            user_msg_count = sum(1 for m in conversation if m.get("role") == "user")
+            update_daily_stats_for_date(user_email, date_str, user_msg_count)
+        except Exception as e:
+            print(f"[DailyStats] update failed for user {user_email}, date {date_str}: {e}")
+        
         # 长期记忆更新改为后台异步执行（不阻塞前端响应）
         self._background_update_memory(conversation, date_str, user_email)
         

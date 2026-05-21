@@ -795,6 +795,152 @@
         .archive-item.draft {
             color: #e17055;
         }
+
+        /* 月份分组折叠样式 */
+        .archive-month-group {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .archive-month-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            cursor: pointer;
+            background: #f1f3f5;
+            border-radius: 12px;
+            transition: background 0.2s;
+            user-select: none;
+        }
+
+        .archive-month-header:hover {
+            background: #e9ecef;
+        }
+
+        .archive-month-icon {
+            font-size: 0.7rem;
+            color: #adb5bd;
+            transition: transform 0.2s;
+            width: 12px;
+            display: inline-block;
+        }
+
+        .archive-month-group.expanded .archive-month-icon {
+            transform: rotate(90deg);
+        }
+
+        .archive-month-label {
+            flex: 1;
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.95rem;
+        }
+
+        .archive-month-count {
+            font-size: 0.75rem;
+            background: #dee2e6;
+            color: #6c757d;
+            padding: 2px 9px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .archive-month-content {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px 0 4px 12px;
+            border-left: 2px solid #f1f3f5;
+            margin: 4px 0 4px 12px;
+        }
+
+        .archive-month-group.expanded .archive-month-content {
+            display: flex;
+        }
+
+        /* 日记热力图 */
+        .archive-heatmap {
+            background: linear-gradient(135deg, #ffffff 0%, #fff9fa 100%);
+            border-radius: 14px;
+            padding: 14px 14px 12px;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 10px rgba(214, 48, 49, 0.06);
+        }
+
+        .heatmap-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.85rem;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .heatmap-title-sub {
+            font-size: 0.7rem;
+            color: #999;
+            font-weight: 400;
+        }
+
+        .heatmap-title-sub strong {
+            color: #d63031;
+            font-size: 0.85rem;
+        }
+
+        .heatmap-grid {
+            display: flex;
+            gap: 3px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .heatmap-col {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex-shrink: 0;
+        }
+
+        .heatmap-cell {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            background: #ebedf0;
+            flex-shrink: 0;
+            transition: transform 0.15s;
+        }
+
+        .heatmap-cell.empty {
+            background: transparent;
+        }
+
+        .heatmap-cell.today {
+            box-shadow: 0 0 0 1.5px #d63031;
+        }
+
+        .heatmap-cell.level-0 { background: #ebedf0; }
+        .heatmap-cell.level-1 { background: #ffe0e6; }
+        .heatmap-cell.level-2 { background: #fab1a0; }
+        .heatmap-cell.level-3 { background: #fd79a8; }
+        .heatmap-cell.level-4 { background: #d63031; }
+
+        .heatmap-legend {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            font-size: 0.7rem;
+            color: #999;
+        }
+
+        .heatmap-legend .heatmap-cell {
+            width: 9px;
+            height: 9px;
+        }
         
         /* 导出按钮样式 */
         .btn-export {
@@ -2000,6 +2146,16 @@
             const diaryFiles = files.filter(f => !pinnedFiles.includes(f) && !f.includes('_draft'));
             const draftFiles = files.filter(f => f.includes('_draft'));
 
+            // 热力图：拉取每日对话统计后渲染（顶部概览块）
+            let dailyStats = {};
+            try {
+                const statsRes = await fetch('/daily-stats', { headers: getAuthHeaders() });
+                if (statsRes.ok) dailyStats = await statsRes.json();
+            } catch (e) {
+                console.error('加载对话统计失败:', e);
+            }
+            list.appendChild(buildArchiveHeatmap(dailyStats));
+
             // 置顶文件分类
             if (pinnedFiles.some(f => files.includes(f))) {
                 const categoryDiv = document.createElement('div');
@@ -2042,27 +2198,156 @@
                 list.appendChild(categoryDiv);
             }
 
-            // 日记文件分类
+            // 日记文件分类（按月份分组，最近月份默认展开）
             if (diaryFiles.length > 0) {
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'archive-category';
                 categoryDiv.innerHTML = '<div class="archive-category-title">📚 历史日记</div>';
                 const itemsDiv = document.createElement('div');
                 itemsDiv.className = 'archive-items';
-                
+
+                // 按 YYYY-MM 分组
+                const monthGroups = {};
                 diaryFiles.forEach(f => {
-                    const div = document.createElement('div');
-                    div.className = 'archive-item';
-                    div.innerHTML = `📓 ${f.replace('.md', '').replace('diary_', '')}`;
-                    div.onclick = () => openMobileReader(f);
-                    itemsDiv.appendChild(div);
+                    const match = f.match(/diary_(\d{4})-(\d{2})-\d{2}_\d+\.md/);
+                    const monthKey = match ? `${match[1]}-${match[2]}` : '未分类';
+                    if (!monthGroups[monthKey]) monthGroups[monthKey] = [];
+                    monthGroups[monthKey].push(f);
                 });
+
+                // 月份倒序：最新的月份在最上方
+                const sortedMonths = Object.keys(monthGroups).sort().reverse();
+
+                sortedMonths.forEach((monthKey, idx) => {
+                    const monthFiles = monthGroups[monthKey];
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'archive-month-group';
+                    if (idx === 0) groupDiv.classList.add('expanded'); // 最近月份默认展开
+
+                    const labelText = monthKey === '未分类'
+                        ? '未分类'
+                        : `${monthKey.split('-')[0]}年${monthKey.split('-')[1]}月`;
+
+                    const header = document.createElement('div');
+                    header.className = 'archive-month-header';
+                    header.innerHTML = `
+                        <span class="archive-month-icon">▶</span>
+                        <span class="archive-month-label">${labelText}</span>
+                        <span class="archive-month-count">${monthFiles.length}</span>
+                    `;
+                    header.onclick = () => groupDiv.classList.toggle('expanded');
+
+                    const content = document.createElement('div');
+                    content.className = 'archive-month-content';
+                    monthFiles.forEach(f => {
+                        const div = document.createElement('div');
+                        div.className = 'archive-item';
+                        div.innerHTML = `📓 ${f.replace('.md', '').replace('diary_', '')}`;
+                        div.onclick = () => openMobileReader(f);
+                        content.appendChild(div);
+                    });
+
+                    groupDiv.appendChild(header);
+                    groupDiv.appendChild(content);
+                    itemsDiv.appendChild(groupDiv);
+                });
+
                 categoryDiv.appendChild(itemsDiv);
                 list.appendChild(categoryDiv);
             }
         } catch (e) {
             document.getElementById('mobile-archive-list').innerHTML = '<div class="empty-state">加载失败</div>';
         }
+    }
+
+    // 构建日记热力图（近 20 周，按当日对话数着色）
+    function buildArchiveHeatmap(dailyStats) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'archive-heatmap';
+
+        const dayCounts = dailyStats || {};
+
+        const WEEKS = 20; // 展示近 20 周 ≈ 5 个月
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = formatDate(today);
+        const dayOfWeek = today.getDay(); // 0 = 周日
+
+        // 起点： (WEEKS-1)*7 + dayOfWeek 天前的那个周日
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - (WEEKS - 1) * 7 - dayOfWeek);
+
+        // 统计近 N 周范围内的写作天数与总对话数
+        let activeDays = 0;
+        let totalMsgs = 0;
+        const grid = document.createElement('div');
+        grid.className = 'heatmap-grid';
+
+        for (let w = 0; w < WEEKS; w++) {
+            const col = document.createElement('div');
+            col.className = 'heatmap-col';
+            for (let d = 0; d < 7; d++) {
+                const cellDate = new Date(startDate);
+                cellDate.setDate(startDate.getDate() + w * 7 + d);
+                const cell = document.createElement('div');
+
+                if (cellDate > today) {
+                    cell.className = 'heatmap-cell empty';
+                } else {
+                    const ds = formatDate(cellDate);
+                    const cnt = dayCounts[ds] || 0;
+                    // 按对话数分级（用户消息条数）
+                    let level = 0;
+                    if (cnt >= 1) level = 1;   // 1~3 条：浅
+                    if (cnt >= 4) level = 2;   // 4~7 条：中
+                    if (cnt >= 8) level = 3;   // 8~15 条：深
+                    if (cnt >= 16) level = 4;  // 16+ 条：最深
+                    cell.className = `heatmap-cell level-${level}`;
+                    if (ds === todayStr) cell.classList.add('today');
+                    cell.title = `${ds}：${cnt} 条对话`;
+                    if (cnt > 0) {
+                        activeDays++;
+                        totalMsgs += cnt;
+                    }
+                }
+                col.appendChild(cell);
+            }
+            grid.appendChild(col);
+        }
+
+        // 标题 + 统计
+        const titleBar = document.createElement('div');
+        titleBar.className = 'heatmap-title';
+        titleBar.innerHTML = `
+            <span>📊 近 ${WEEKS} 周对话</span>
+            <span class="heatmap-title-sub">写了 <strong>${activeDays}</strong> 天 · 共 <strong>${totalMsgs}</strong> 条</span>
+        `;
+
+        // 图例
+        const legend = document.createElement('div');
+        legend.className = 'heatmap-legend';
+        legend.innerHTML = `
+            <span>少</span>
+            <div class="heatmap-cell level-0"></div>
+            <div class="heatmap-cell level-1"></div>
+            <div class="heatmap-cell level-2"></div>
+            <div class="heatmap-cell level-3"></div>
+            <div class="heatmap-cell level-4"></div>
+            <span>多</span>
+        `;
+
+        wrapper.appendChild(titleBar);
+        wrapper.appendChild(grid);
+        wrapper.appendChild(legend);
+        return wrapper;
+    }
+
+    // 本地时间格式化为 YYYY-MM-DD（避免 toISOString 带来的时区偏差）
+    function formatDate(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
     }
 
     function appendMessage(role, text) {

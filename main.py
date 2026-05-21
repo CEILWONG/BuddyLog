@@ -214,6 +214,24 @@ async def list_files(current_email: str = Depends(get_current_user)):
     return list_diary_files(current_email)
 
 
+@app.get("/daily-stats")
+async def get_daily_stats(current_email: str = Depends(get_current_user)):
+    """获取每日对话统计（用于日记档案页热力图）"""
+    from src.utils.file_utils import get_or_build_daily_stats
+    return get_or_build_daily_stats(current_email)
+
+
+@app.post("/daily-stats/rebuild")
+async def rebuild_daily_stats(current_email: str = Depends(get_current_user)):
+    """强制从历史 md 文件重建每日对话统计（用于格式升级或修复异常）"""
+    from src.utils.file_utils import (
+        _build_daily_stats_from_files, _save_daily_stats
+    )
+    stats = _build_daily_stats_from_files(current_email)
+    _save_daily_stats(stats, current_email)
+    return stats
+
+
 @app.get("/today-draft")
 async def get_today_draft(current_email: str = Depends(get_current_user)):
     """获取今天的草稿对话记录，用于恢复聊天历史"""

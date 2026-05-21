@@ -465,3 +465,96 @@ def get_diary_file_path(filename, user_email: Optional[str] = None):
     # 日记文件存放在 diaries 子目录
     diaries_dir = _get_diaries_dir(user_email)
     return os.path.join(diaries_dir, filename)
+
+
+# ==================== 每日对话统计 ====================
+
+DAILY_STATS_FILENAME = "daily_stats.json"
+
+
+def _get_daily_stats_path(user_email: Optional[str] = None) -> str:
+    """获取每日对话统计文件路径"""
+    base_dir = _get_user_base_dir(user_email)
+    return os.path.join(base_dir, DAILY_STATS_FILENAME)
+
+
+def _count_user_messages_in_md(filepath: str) -> int:
+    """
+    从单个 md 文件（草稿或已归档）中统计用户消息数。
+    兼容三种历史格式：
+    - 新格式（带时间戳，引用块）：> 🙋 **[HH:MM:SS] 用户**: **xxx**
+    - 中期格式（无时间戳，引用块）：> 🙋 **用户**: xxx
+    - 旧格式（纯文本）：**用户**: xxx
+    时间戳部分用可选分组，统一以 `**用户**:` 为锚点。
+    """
+    if not os.path.exists(filepath):
+        return 0
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception:
+        return 0
+    return len(re.findall(r'\*\*\s*(?:\[\d{2}:\d{2}:\d{2}\]\s*)?用户\s*\*\*\s*:', content))
+
+
+def _parse_diary_date_from_filename(filename: str) -> str:
+    """从日记文件名提取 YYYY-MM-DD，不区分草稿与归档"""
+    m = re.match(r'diary_(\d{4}-\d{2}-\d{2})_', filename)
+    return m.group(1) if m else ""
+
+
+def _build_daily_stats_from_files(user_email: Optional[str] = None) -> dict:
+    """扫描用户所有日记文件，重建每日对话统计"""
+    stats = {}
+    diaries_dir = _get_diaries_dir(user_email)
+    if not os.path.exists(diaries_dir):
+        return stats
+
+    for fn in os.listdir(diaries_dir):
+        if not fn.endswith('.md'):
+            continue
+        date_str = _parse_diary_date_from_filename(fn)
+        if not date_str:
+            continue
+        cnt = _count_user_messages_in_md(os.path.join(diaries_dir, fn))
+        # 同一天可能有多个归档文件 + 一个草稿，累加
+        stats[date_str] = stats.get(date_str, 0) + cnt
+    return stats
+
+
+def _save_daily_stats(stats: dict, user_email: Optional[str] = None):
+    """保存每日统计到用户目录"""
+    path = _get_daily_stats_path(user_email)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(stats, f, ensure_ascii=False, indent=2)
+
+
+def get_or_build_daily_stats(user_email: Optional[str] = None) -> dict:
+    """
+    获取每日对话统计。
+    首次调用（文件不存在）时从历史 md 文件扫描重建，后续直接读文件。
+    """
+    path = _get_daily_stats_path(user_email)
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass  # 解析失败时重建
+    # 首次生成：扫描所有 md 文件
+    stats = _build_daily_stats_from_files(user_email)
+    _save_daily_stats(stats, user_email)
+    return stats
+
+
+def update_daily_stats_for_date(user_email: Optional[str], date_str: str, count: int):
+    """
+    归档后更新指定日期的对话数（以累加方式处理同日多次归档）。
+    调用前确保统计文件已存在（未存在则先重建）。
+    """
+    if not date_str or count <= 0:
+        return
+    stats = get_or_build_daily_stats(user_email)
+    stats[date_str] = stats.get(date_str, 0) + count
+    _save_daily_stats(stats, user_email)
