@@ -749,6 +749,483 @@
             -webkit-overflow-scrolling: touch;
         }
         
+        /* 移动端复盘视图 · 暗色赛博科技风 */
+        #mobile-review-view {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            position: relative;
+            background:
+                radial-gradient(ellipse at top, rgba(0, 212, 255, 0.10), transparent 55%),
+                radial-gradient(ellipse at bottom, rgba(255, 102, 204, 0.08), transparent 60%),
+                linear-gradient(180deg, #06091e 0%, #0d1130 50%, #06091e 100%);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), inset 0 0 1px rgba(0, 212, 255, 0.35);
+            overflow: hidden;
+            margin: 10px;
+            color: #e0e7ff;
+        }
+        #mobile-review-view::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0, 212, 255, 0.045) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.045) 1px, transparent 1px);
+            background-size: 28px 28px;
+            pointer-events: none;
+            z-index: 0;
+            mask-image: radial-gradient(ellipse at center, #000 30%, transparent 95%);
+            -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 95%);
+        }
+        #mobile-review-header {
+            position: relative;
+            z-index: 1;
+            padding: 13px 18px;
+            background: linear-gradient(180deg, rgba(6, 9, 30, 0.92), rgba(13, 17, 48, 0.78));
+            border-bottom: 1px solid rgba(0, 212, 255, 0.22);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            gap: 10px;
+            backdrop-filter: blur(8px);
+        }
+        #mobile-review-header::after {
+            content: '';
+            position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+            background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+            opacity: 0.55;
+        }
+        #mobile-review-header h2 {
+            margin: 0;
+            color: #e0f7ff;
+            font-size: 0.86rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+        }
+        #mobile-review-header h2::before {
+            content: '';
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #00ff9f;
+            box-shadow: 0 0 8px #00ff9f, 0 0 4px #00ff9f;
+            animation: review-led-pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes review-led-pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 10px #00ff9f, 0 0 4px #00ff9f; }
+            50% { opacity: 0.35; box-shadow: 0 0 2px #00ff9f; }
+        }
+        #mobile-review-update-btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 212, 255, 0.5);
+            background: rgba(0, 212, 255, 0.10);
+            color: #7df4ff;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.18), inset 0 0 8px rgba(0, 212, 255, 0.06);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            line-height: 1.15;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+        }
+        #mobile-review-update-btn .btn-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+        }
+        #mobile-review-update-btn .btn-stat {
+            font-size: 0.58rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            opacity: 0.78;
+        }
+        #mobile-review-update-btn .btn-stat:empty { display: none; }
+        #mobile-review-update-btn:disabled .btn-stat {
+            color: #f59e0b;
+            opacity: 1;
+            font-weight: 600;
+        }
+        #mobile-review-update-btn:hover:not(:disabled) {
+            background: rgba(0, 212, 255, 0.22);
+            box-shadow: 0 0 18px rgba(0, 212, 255, 0.45), inset 0 0 12px rgba(0, 212, 255, 0.12);
+            color: #fff;
+        }
+        #mobile-review-update-btn:disabled {
+            background: rgba(100, 116, 139, 0.08);
+            border-color: rgba(100, 116, 139, 0.28);
+            color: #64748b;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        #mobile-review-body {
+            flex: 1;
+            position: relative;
+            z-index: 1;
+            overflow-y: auto;
+            padding: 14px;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+        #mobile-review-body::-webkit-scrollbar { width: 4px; }
+        #mobile-review-body::-webkit-scrollbar-thumb { background: rgba(0, 212, 255, 0.32); border-radius: 2px; }
+        #mobile-review-body::-webkit-scrollbar-track { background: transparent; }
+
+        /* 章节锚点导航 (sticky) */
+        .review-anchors {
+            position: sticky;
+            top: -2px;
+            z-index: 5;
+            display: flex;
+            gap: 6px;
+            margin: -4px -2px 14px;
+            padding: 6px 2px 8px;
+            background: linear-gradient(180deg, rgba(6, 9, 30, 0.95) 70%, rgba(6, 9, 30, 0));
+            backdrop-filter: blur(6px);
+        }
+        .review-anchor {
+            flex: 1;
+            padding: 7px 4px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 6px;
+            background: rgba(15, 23, 42, 0.55);
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            user-select: none;
+        }
+        .review-anchor .num { font-size: 0.58rem; opacity: 0.55; letter-spacing: 0.06em; }
+        .review-anchor .label { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.04em; }
+        .review-anchor.active.character { color: #7df4ff; border-color: rgba(0, 212, 255, 0.6); box-shadow: 0 0 14px rgba(0, 212, 255, 0.28); background: rgba(0, 212, 255, 0.08); }
+        .review-anchor.active.highlights { color: #ff9adb; border-color: rgba(255, 102, 204, 0.6); box-shadow: 0 0 14px rgba(255, 102, 204, 0.28); background: rgba(255, 102, 204, 0.08); }
+        .review-anchor.active.insights { color: #6cffc1; border-color: rgba(0, 255, 159, 0.6); box-shadow: 0 0 14px rgba(0, 255, 159, 0.28); background: rgba(0, 255, 159, 0.08); }
+
+        /* 状态行 */
+        .review-tip {
+            margin: 0 0 12px;
+            padding: 6px 10px;
+            font-size: 0.68rem;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            letter-spacing: 0.03em;
+            border-left: 2px solid rgba(148, 163, 184, 0.4);
+            background: rgba(15, 23, 42, 0.45);
+            text-align: left;
+        }
+        .review-tip::before { content: '> '; color: #00ff9f; font-weight: 700; }
+
+        /* 空态 */
+        .review-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 24px;
+            text-align: center;
+            color: #94a3b8;
+            position: relative;
+            z-index: 1;
+        }
+        .review-empty .icon {
+            font-size: 3rem;
+            margin-bottom: 14px;
+            filter: drop-shadow(0 0 14px rgba(0, 212, 255, 0.55));
+        }
+        .review-empty p { margin: 6px 0 22px; font-size: 0.88rem; line-height: 1.7; color: #cbd5e1; }
+        .review-empty button {
+            padding: 12px 28px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 212, 255, 0.6);
+            background: linear-gradient(180deg, rgba(0, 212, 255, 0.20), rgba(0, 212, 255, 0.05));
+            color: #e0f7ff;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            box-shadow: 0 0 24px rgba(0, 212, 255, 0.28), inset 0 0 16px rgba(0, 212, 255, 0.06);
+            transition: all 0.25s;
+        }
+        .review-empty button:hover:not(:disabled) {
+            box-shadow: 0 0 32px rgba(0, 212, 255, 0.55), inset 0 0 24px rgba(0, 212, 255, 0.16);
+            transform: translateY(-1px);
+        }
+        .review-empty button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* 加载态 */
+        .review-loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7df4ff;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            letter-spacing: 0.08em;
+        }
+        .review-loading::before {
+            content: '◉ ';
+            color: #00ff9f;
+            animation: review-led-pulse 1.4s ease-in-out infinite;
+        }
+
+        /* 模块卡片 */
+        .review-card {
+            position: relative;
+            border-radius: 10px;
+            padding: 14px 14px 13px;
+            margin-bottom: 16px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(13, 17, 48, 0.55));
+            border: 1px solid;
+            line-height: 1.75;
+            font-size: 0.88rem;
+            color: #e0e7ff;
+            backdrop-filter: blur(4px);
+            overflow: hidden;
+            scroll-margin-top: 64px;
+        }
+        .review-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            opacity: 0.55;
+        }
+        .review-card::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -30%;
+            width: 30%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            opacity: 0;
+            animation: review-scan 6s linear infinite;
+        }
+        @keyframes review-scan {
+            0% { left: -30%; opacity: 0; }
+            15% { opacity: 0.85; }
+            85% { opacity: 0.85; }
+            100% { left: 100%; opacity: 0; }
+        }
+        .review-card-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 0 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed rgba(148, 163, 184, 0.22);
+        }
+        .review-card-head .num {
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: currentColor;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            opacity: 0.9;
+            min-width: 36px;
+        }
+        .review-card-head .titles {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+            min-width: 0;
+        }
+        .review-card-head .codename {
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-size: 0.6rem;
+            letter-spacing: 0.14em;
+            color: currentColor;
+            opacity: 0.65;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+        .review-card-head .ch-title {
+            font-size: 0.96rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.04em;
+        }
+        .review-card-head .corner {
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-size: 0.66rem;
+            color: currentColor;
+            opacity: 0.5;
+            white-space: nowrap;
+        }
+        .review-card .review-card-body { word-break: break-word; color: #cbd5e1; }
+        .review-card .review-card-body p { margin: 8px 0; }
+        .review-card .review-card-body strong {
+            color: #fff;
+            font-weight: 700;
+            text-shadow: 0 0 10px currentColor;
+        }
+        .review-card .review-card-body h3 {
+            font-size: 0.84rem;
+            margin: 16px 0 10px;
+            color: #fff;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            letter-spacing: 0.04em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .review-card .review-card-body h3::before {
+            content: '◆';
+            color: currentColor;
+            font-size: 0.7em;
+        }
+        .review-card .review-card-body ul {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0;
+        }
+        .review-card .review-card-body ul li {
+            position: relative;
+            padding: 6px 0 6px 18px;
+            margin: 0;
+        }
+        .review-card .review-card-body ul li::before {
+            content: '▸';
+            position: absolute;
+            left: 4px;
+            top: 6px;
+            color: currentColor;
+            opacity: 0.75;
+        }
+        .review-card .review-card-body code {
+            background: rgba(0, 212, 255, 0.10);
+            color: #7df4ff;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.85em;
+        }
+
+        /* 主题色 */
+        .review-card.character {
+            color: #00d4ff;
+            border-color: rgba(0, 212, 255, 0.35);
+            box-shadow: 0 0 22px rgba(0, 212, 255, 0.14), inset 0 0 1px rgba(0, 212, 255, 0.32);
+        }
+        .review-card.highlights {
+            color: #ff66cc;
+            border-color: rgba(255, 102, 204, 0.35);
+            box-shadow: 0 0 22px rgba(255, 102, 204, 0.14), inset 0 0 1px rgba(255, 102, 204, 0.32);
+        }
+        .review-card.insights {
+            color: #00ff9f;
+            border-color: rgba(0, 255, 159, 0.35);
+            box-shadow: 0 0 22px rgba(0, 255, 159, 0.14), inset 0 0 1px rgba(0, 255, 159, 0.32);
+        }
+
+        /* 回忆高光：每条独立小卡片 */
+        .highlight-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 2px; }
+        .highlight-item {
+            position: relative;
+            padding: 10px 12px 10px 38px;
+            background: rgba(255, 102, 204, 0.07);
+            border: 1px solid rgba(255, 102, 204, 0.22);
+            border-radius: 6px;
+            color: #f1d6ec;
+            font-size: 0.86rem;
+            line-height: 1.65;
+            transition: all 0.2s;
+        }
+        .highlight-item:hover { background: rgba(255, 102, 204, 0.12); border-color: rgba(255, 102, 204, 0.4); }
+        .highlight-item::before {
+            content: attr(data-idx);
+            position: absolute;
+            left: 8px; top: 9px;
+            width: 22px; height: 22px;
+            border-radius: 4px;
+            background: rgba(255, 102, 204, 0.16);
+            border: 1px solid rgba(255, 102, 204, 0.45);
+            color: #ff9adb;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-size: 0.66rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .highlight-item strong { color: #fff; text-shadow: 0 0 10px rgba(255, 102, 204, 0.65); }
+
+        /* 洞察：分子模块化 */
+        .insight-block {
+            margin-top: 14px;
+            padding: 12px 14px 10px;
+            background: rgba(0, 255, 159, 0.05);
+            border: 1px solid rgba(0, 255, 159, 0.22);
+            border-radius: 6px;
+        }
+        .insight-block + .insight-block { margin-top: 12px; }
+        .insight-block-title {
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+            color: #6cffc1;
+            text-transform: uppercase;
+            margin: 0 0 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .insight-block-title::before { content: '◇'; font-size: 0.85em; }
+        .insight-block ul { list-style: none; padding: 0; margin: 0; }
+        .insight-block li {
+            position: relative;
+            padding: 6px 0 6px 22px;
+            color: #d6f5e8;
+            font-size: 0.86rem;
+            line-height: 1.7;
+        }
+        .insight-block li::before {
+            content: '▸';
+            position: absolute;
+            left: 6px;
+            top: 6px;
+            color: #00ff9f;
+            opacity: 0.85;
+        }
+        .insight-block p { margin: 4px 0; color: #d6f5e8; font-size: 0.86rem; line-height: 1.7; }
+        .insight-block.questions { background: rgba(125, 244, 255, 0.05); border-color: rgba(125, 244, 255, 0.24); }
+        .insight-block.questions .insight-block-title { color: #7df4ff; }
+        .insight-block.questions li { color: #d4ecf5; padding-left: 28px; }
+        .insight-block.questions li::before {
+            content: '?';
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            font-weight: 700;
+            background: rgba(125, 244, 255, 0.16);
+            border: 1px solid rgba(125, 244, 255, 0.45);
+            border-radius: 3px;
+            width: 17px; height: 17px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            top: 7px;
+            left: 4px;
+            color: #7df4ff;
+            opacity: 1;
+        }
+        .insight-block.questions p { color: #d4ecf5; }
+        
         .archive-category {
             margin-bottom: 20px;
         }
@@ -1529,6 +2006,17 @@
             <div class="empty-state">加载中...</div>
         </div>
     </div>
+    
+    <!-- 移动端复盘视图 -->
+    <div id="mobile-review-view">
+        <div id="mobile-review-header">
+            <h2>🪞 复盘</h2>
+            <button id="mobile-review-update-btn" onclick="triggerReviewUpdate()" disabled><span class="btn-label">更新复盘</span><span class="btn-stat" id="review-btn-stat"></span></button>
+        </div>
+        <div id="mobile-review-body">
+            <div class="review-loading">加载中</div>
+        </div>
+    </div>
 </div>
 
 <!-- 移动端用户菜单弹窗 -->
@@ -1591,6 +2079,10 @@
         <span>📚</span>
         <span>日记档案</span>
     </button>
+    <button class="nav-btn" onclick="showMobileReview()" id="mobile-nav-review">
+        <span>🪞</span>
+        <span>复盘</span>
+    </button>
 </div>
 
 <!-- 移动端阅读视图（全屏） -->
@@ -1634,9 +2126,11 @@
     // 移动端元素
     const mobileChatView = document.getElementById('mobile-chat-view');
     const mobileArchiveView = document.getElementById('mobile-archive-view');
+    const mobileReviewView = document.getElementById('mobile-review-view');
     const mobileReaderView = document.getElementById('mobile-reader-view');
     const mobileNavChat = document.getElementById('mobile-nav-chat');
     const mobileNavArchive = document.getElementById('mobile-nav-archive');
+    const mobileNavReview = document.getElementById('mobile-nav-review');
     const mobileUserModal = document.getElementById('mobile-user-modal');
     
     let history = [];
@@ -1953,8 +2447,10 @@
         currentMobileView = 'chat';
         mobileChatView.style.display = 'flex';
         mobileArchiveView.style.display = 'none';
+        if (mobileReviewView) mobileReviewView.style.display = 'none';
         mobileNavChat.classList.add('active');
         mobileNavArchive.classList.remove('active');
+        if (mobileNavReview) mobileNavReview.classList.remove('active');
     }
 
     // 移动端：显示档案视图
@@ -1962,9 +2458,23 @@
         currentMobileView = 'archive';
         mobileChatView.style.display = 'none';
         mobileArchiveView.style.display = 'flex';
+        if (mobileReviewView) mobileReviewView.style.display = 'none';
         mobileNavChat.classList.remove('active');
         mobileNavArchive.classList.add('active');
+        if (mobileNavReview) mobileNavReview.classList.remove('active');
         loadMobileFiles();
+    }
+
+    // 移动端：显示复盘视图
+    function showMobileReview() {
+        currentMobileView = 'review';
+        mobileChatView.style.display = 'none';
+        mobileArchiveView.style.display = 'none';
+        if (mobileReviewView) mobileReviewView.style.display = 'flex';
+        mobileNavChat.classList.remove('active');
+        mobileNavArchive.classList.remove('active');
+        if (mobileNavReview) mobileNavReview.classList.add('active');
+        loadMobileReview();
     }
 
     // 移动端：打开阅读视图
@@ -2013,6 +2523,365 @@
         } catch (e) {
             document.getElementById('mobile-reader-content').innerHTML = '<div class="empty-state">加载失败</div>';
         }
+    }
+
+    // ==================== 复盘功能 ====================
+
+    let isReviewLoading = false;
+
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    // 将复盘某一段的纯 Markdown 片段转为简易 HTML（支持 ###, **, 无序列表，段落）
+    function renderReviewSection(text) {
+        if (!text) return '';
+        const lines = text.split('\n');
+        let html = '';
+        let inList = false;
+        let para = [];
+        const flushPara = () => {
+            if (para.length) {
+                html += '<p>' + para.join(' ') + '</p>';
+                para = [];
+            }
+        };
+        const closeList = () => {
+            if (inList) { html += '</ul>'; inList = false; }
+        };
+        const inline = (s) => escapeHtml(s)
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>');
+        for (const raw of lines) {
+            const line = raw.replace(/\s+$/, '');
+            if (!line.trim()) {
+                flushPara();
+                closeList();
+                continue;
+            }
+            const h3 = line.match(/^###\s+(.+)$/);
+            if (h3) {
+                flushPara();
+                closeList();
+                html += '<h3>' + inline(h3[1]) + '</h3>';
+                continue;
+            }
+            const li = line.match(/^\s*[-*]\s+(.+)$/);
+            if (li) {
+                flushPara();
+                if (!inList) { html += '<ul>'; inList = true; }
+                html += '<li>' + inline(li[1]) + '</li>';
+                continue;
+            }
+            // 普通段落行
+            closeList();
+            para.push(inline(line));
+        }
+        flushPara();
+        closeList();
+        return html;
+    }
+
+    // 回忆高光 ul/li -> 独立带编号的小卡片
+    function transformHighlightsHTML(html) {
+        if (!html) return '';
+        return html.replace(/<ul>([\s\S]*?)<\/ul>/g, (m, inner) => {
+            let idx = 0;
+            const items = inner.replace(/<li>([\s\S]*?)<\/li>/g, (mm, content) => {
+                idx += 1;
+                const num = String(idx).padStart(2, '0');
+                return '<div class="highlight-item" data-idx="' + num + '">' + content + '</div>';
+            });
+            return '<div class="highlight-list">' + items + '</div>';
+        });
+    }
+
+    // 洞察下的 ### 子标题 -> 子模块块（发散问题 vs 建议）
+    function transformInsightsBody(rawText) {
+        if (!rawText) return '';
+        const parts = rawText.split(/(?=^###\s+)/m);
+        let lead = '';
+        let out = '';
+        for (const part of parts) {
+            if (!part || !part.trim()) continue;
+            const m = part.match(/^###\s+(.+?)\s*\n([\s\S]*)$/);
+            if (!m) {
+                lead += renderReviewSection(part);
+                continue;
+            }
+            const title = m[1].trim();
+            const body = m[2] || '';
+            const innerHtml = renderReviewSection(body);
+            const isQ = /问题|疑问/.test(title);
+            out += '<div class="insight-block ' + (isQ ? 'questions' : '') + '">'
+                + '<div class="insight-block-title">' + escapeHtml(title) + '</div>'
+                + innerHtml
+                + '</div>';
+        }
+        return lead + out;
+    }
+
+    // 章节锚点点击与滚动高亮
+    let _reviewObserver = null;
+    function setupReviewAnchors() {
+        const body = document.getElementById('mobile-review-body');
+        if (!body) return;
+        const chips = body.querySelectorAll('.review-anchor');
+        const cards = ['character', 'highlights', 'insights']
+            .map(c => body.querySelector('.review-card.' + c))
+            .filter(Boolean);
+        if (!chips.length || !cards.length) return;
+
+        chips.forEach(chip => {
+            chip.onclick = () => {
+                const target = chip.getAttribute('data-target');
+                const card = body.querySelector('.review-card.' + target);
+                if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            };
+        });
+
+        if (_reviewObserver) { try { _reviewObserver.disconnect(); } catch (_) {} }
+        if (typeof IntersectionObserver === 'undefined') return;
+        _reviewObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const cls = ['character', 'highlights', 'insights']
+                    .find(c => entry.target.classList.contains(c));
+                if (!cls) return;
+                chips.forEach(chip => {
+                    chip.classList.toggle('active', chip.getAttribute('data-target') === cls);
+                });
+            });
+        }, { root: body, rootMargin: '-20% 0px -55% 0px', threshold: 0.01 });
+        cards.forEach(card => _reviewObserver.observe(card));
+    }
+
+    // 渲染后增强：插入章节锚点、重构卡片头、拆分高光/洞察子模块
+    function enhanceReviewView(rawSections) {
+        const body = document.getElementById('mobile-review-body');
+        if (!body) return;
+
+        const cards = body.querySelectorAll('.review-card');
+        if (!cards.length) return;
+
+        const hasChar = body.querySelector('.review-card.character');
+        const hasHigh = body.querySelector('.review-card.highlights');
+        const hasIns = body.querySelector('.review-card.insights');
+
+        // 插入章节锚点 chips（仅在三段模式下）
+        if (hasChar && hasHigh && hasIns && !body.querySelector('.review-anchors')) {
+            const anchors = document.createElement('div');
+            anchors.className = 'review-anchors';
+            anchors.innerHTML =
+                '<div class="review-anchor character active" data-target="character">'
+                + '<span class="num">01 // PROFILE</span><span class="label">人物画像</span></div>'
+                + '<div class="review-anchor highlights" data-target="highlights">'
+                + '<span class="num">02 // MOMENTS</span><span class="label">回忆高光</span></div>'
+                + '<div class="review-anchor insights" data-target="insights">'
+                + '<span class="num">03 // INSIGHT</span><span class="label">洞察</span></div>';
+            body.insertBefore(anchors, body.firstChild);
+        }
+
+        // 重构卡片头：编号 + codename + 中文标题 + 角标
+        const headMap = {
+            character: { num: '01', code: 'PROFILE // 人物画像', ch: '人物画像', corner: '┐ MOSS' },
+            highlights: { num: '02', code: 'MOMENTS // 回忆高光', ch: '回忆高光', corner: '┐ DATA' },
+            insights: { num: '03', code: 'INSIGHT // 心理洞察', ch: '洞察', corner: '┐ SCAN' }
+        };
+        cards.forEach(card => {
+            const cls = ['character', 'highlights', 'insights'].find(c => card.classList.contains(c));
+            if (!cls) return;
+            const oldTitle = card.querySelector('.review-card-title');
+            if (!oldTitle) return;
+            const meta = headMap[cls];
+            const head = document.createElement('div');
+            head.className = 'review-card-head';
+            head.innerHTML =
+                '<div class="num">' + meta.num + '</div>'
+                + '<div class="titles">'
+                + '<span class="codename">' + meta.code + '</span>'
+                + '<span class="ch-title">' + meta.ch + '</span>'
+                + '</div>'
+                + '<div class="corner">' + meta.corner + '</div>';
+            oldTitle.parentNode.replaceChild(head, oldTitle);
+        });
+
+        // 高光段：拆分为独立小卡片
+        if (hasHigh) {
+            const highBody = hasHigh.querySelector('.review-card-body');
+            if (highBody) {
+                const newHTML = transformHighlightsHTML(highBody.innerHTML);
+                if (newHTML) highBody.innerHTML = newHTML;
+            }
+        }
+
+        // 洞察段：重新按 H3 拆分子模块
+        if (hasIns && rawSections && rawSections['洞察']) {
+            const newHTML = transformInsightsBody(rawSections['洞察']);
+            if (newHTML) {
+                const insBody = hasIns.querySelector('.review-card-body');
+                if (insBody) insBody.innerHTML = newHTML;
+            }
+        }
+
+        setupReviewAnchors();
+    }
+
+    function renderReviewView(data) {
+        const body = document.getElementById('mobile-review-body');
+        const updateBtn = document.getElementById('mobile-review-update-btn');
+        if (!body) return;
+
+        const canInfo = (data && data.can_update_info) || { can_update: true, is_first: true };
+
+        // 空态：后后台还没有 review.md
+        if (!data || !data.exists) {
+            updateBtn.style.display = 'none';
+            body.innerHTML = `
+                <div class="review-empty">
+                    <div class="icon">🪞</div>
+                    <p>还没有生成复盘。<br>MOSS 会基于你的所有日记，为你生成一份包含人物画像、回忆高光、洞察的复盘报告。</p>
+                    <button id="review-start-btn" onclick="startReview()">开始复盘</button>
+                </div>`;
+            return;
+        }
+
+        // 有内容：渲染三段卡片
+        const sections = data.sections || {};
+        const meta = data.meta || {};
+        const tip = '';
+
+        // 更新按钮状态 + 把「距上次 X 天 · 新增 Y 轮」放到按钮副标签
+        updateBtn.style.display = '';
+        const _statEl = document.getElementById('review-btn-stat');
+        const _d = canInfo.days_since == null ? 0 : canInfo.days_since;
+        const _c = canInfo.conversations_delta == null ? 0 : canInfo.conversations_delta;
+        const _reqD = canInfo.required_days == null ? 1 : canInfo.required_days;
+        const _reqC = canInfo.required_delta == null ? 5 : canInfo.required_delta;
+        if (_statEl) {
+            if (!meta.generated_date) {
+                _statEl.textContent = '';
+            } else if (canInfo.can_update) {
+                _statEl.textContent = '距上次 ' + _d + ' 天 · 新增 ' + _c + ' 轮';
+            } else {
+                // 置灰时明确告知「还差什么」
+                const _missDay = _d < _reqD;
+                const _missConv = _c < _reqC;
+                const _needConv = Math.max(_reqC - _c, 0);
+                if (_missDay && _missConv) {
+                    _statEl.textContent = '需明日 · 还差 ' + _needConv + ' 轮对话';
+                } else if (_missDay) {
+                    _statEl.textContent = '需明日再来';
+                } else if (_missConv) {
+                    _statEl.textContent = '还差 ' + _needConv + ' 轮对话';
+                } else {
+                    _statEl.textContent = '暂不可更新';
+                }
+            }
+        }
+        if (canInfo.can_update && !canInfo.is_first) {
+            updateBtn.disabled = false;
+            updateBtn.title = '点击重新生成复盘';
+        } else if (canInfo.is_first) {
+            updateBtn.disabled = false;
+            updateBtn.title = '';
+        } else {
+            updateBtn.disabled = true;
+            updateBtn.title = canInfo.reason || ('需间隔≥' + _reqD + '天且新增对话≥' + _reqC + '轮才能更新');
+        }
+
+        const charBody = renderReviewSection(sections['人物画像'] || '');
+        const highlightBody = renderReviewSection(sections['回忆高光'] || '');
+        const insightBody = renderReviewSection(sections['洞察'] || '');
+
+        // 如果三段均为空，回退为原始文本
+        const allEmpty = !charBody && !highlightBody && !insightBody;
+        if (allEmpty && data.content) {
+            body.innerHTML = `
+                ${tip ? `<p class="review-tip">${escapeHtml(tip)}</p>` : ''}
+                <div class="review-card character">
+                    <div class="review-card-body">${renderReviewSection(data.content)}</div>
+                </div>`;
+            return;
+        }
+
+        body.innerHTML = `
+            ${tip ? `<p class="review-tip">${escapeHtml(tip)}</p>` : ''}
+            <div class="review-card character">
+                <div class="review-card-title">👤 人物画像</div>
+                <div class="review-card-body">${charBody || '<p>暂无内容</p>'}</div>
+            </div>
+            <div class="review-card highlights">
+                <div class="review-card-title">✨ 回忆高光</div>
+                <div class="review-card-body">${highlightBody || '<p>暂无内容</p>'}</div>
+            </div>
+            <div class="review-card insights">
+                <div class="review-card-title">🔮 洞察</div>
+                <div class="review-card-body">${insightBody || '<p>暂无内容</p>'}</div>
+            </div>`;
+
+        try { enhanceReviewView(sections); } catch (e) { console && console.warn && console.warn('enhanceReviewView failed:', e); }
+    }
+
+    async function loadMobileReview() {
+        const body = document.getElementById('mobile-review-body');
+        if (!body) return;
+        body.innerHTML = '<div class="review-loading">加载中...</div>';
+        try {
+            const res = await fetch('/review', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (!res.ok) {
+                body.innerHTML = '<div class="review-loading">加载失败，请稍后重试</div>';
+                return;
+            }
+            const data = await res.json();
+            renderReviewView(data);
+        } catch (e) {
+            body.innerHTML = '<div class="review-loading">网络异常，请稍后重试</div>';
+        }
+    }
+
+    async function postReview(loadingTip) {
+        if (isReviewLoading) return;
+        isReviewLoading = true;
+        const body = document.getElementById('mobile-review-body');
+        const updateBtn = document.getElementById('mobile-review-update-btn');
+        if (body) body.innerHTML = `<div class="review-loading">${loadingTip || 'MOSS 正在复盘中，需要一点时间...'}</div>`;
+        if (updateBtn) updateBtn.disabled = true;
+        try {
+            const res = await fetch('/review', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                renderReviewView(data);
+            } else {
+                let detail = '生成复盘失败';
+                try {
+                    const err = await res.json();
+                    if (err && err.detail) detail = err.detail;
+                } catch (_) {}
+                if (body) body.innerHTML = `<div class="review-empty"><div class="icon">⚠️</div><p>${escapeHtml(detail)}</p><button onclick="loadMobileReview()">返回</button></div>`;
+            }
+        } catch (e) {
+            if (body) body.innerHTML = '<div class="review-empty"><div class="icon">⚠️</div><p>网络异常，请稍后重试</p><button onclick="loadMobileReview()">返回</button></div>';
+        } finally {
+            isReviewLoading = false;
+        }
+    }
+
+    function startReview() {
+        postReview('MOSS 正在阅读你的所有日记，生成复盘需要一点时间...');
+    }
+
+    function triggerReviewUpdate() {
+        postReview('MOSS 正在重新复盘中...');
     }
 
     // Markdown渲染

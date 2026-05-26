@@ -311,3 +311,29 @@ def get_user_settings(email: str) -> Dict[str, Any]:
     if not user_info:
         return {}
     return user_info.get("settings", {})
+
+
+def get_user_review_meta(email: str) -> Dict[str, Any]:
+    """
+    获取用户复盘元数据（内嵌在 user_index.json 的 review 字段）。
+
+    存量用户返回空 dict，调用方需使用 .get 取值。
+    """
+    user_info = get_user_by_email(email)
+    if not user_info:
+        return {}
+    return user_info.get("review", {}) or {}
+
+
+def update_user_review_meta(email: str, meta: Dict[str, Any]) -> bool:
+    """
+    更新（覆盖）用户复盘元数据。
+
+    字段不存在时自动创建，存量用户首次写入时自然补齐，无需迁移脚本。
+    """
+    index = _load_user_index()
+    if email not in index:
+        return False
+    index[email]["review"] = meta
+    _save_user_index(index)
+    return True

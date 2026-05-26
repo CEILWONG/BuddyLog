@@ -36,6 +36,7 @@ from src.models.auth_schemas import (
 from src.services.chat_service import ChatService
 from src.services.archive_service import ArchiveService
 from src.services.auth_service import verify_password
+from src.services.review_service import ReviewService
 from src.utils.file_utils import ensure_data_dir, list_diary_files, get_diary_file_path
 from src.utils.auth_utils import create_access_token, get_current_user
 from src.utils.user_utils import (
@@ -61,6 +62,7 @@ app.add_middleware(
 # 初始化服务
 archive_service = ArchiveService(MODEL, openai_client, enable_thinking=ENABLE_THINKING)
 chat_service = ChatService(MODEL, openai_client, archive_service, enable_thinking=ENABLE_THINKING)
+review_service = ReviewService(MODEL, openai_client, enable_thinking=ENABLE_THINKING)
 
 
 # ==================== 认证路由 ====================
@@ -302,6 +304,42 @@ async def archive_diary(req: ArchiveRequest, current_email: str = Depends(get_cu
         return result
     except Exception as e:
         print(f"Error in archive: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 复盘接口 ====================
+
+@app.get("/review")
+async def get_review(current_email: str = Depends(get_current_user)):
+    """获取当前用户的复盘内容与状态"""
+    try:
+        return review_service.get_review(current_email)
+    except Exception as e:
+        print(f"Error in get_review: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/review")
+async def create_or_update_review(current_email: str = Depends(get_current_user)):
+    """生成或更新复盘（后端统一校验更新条件）"""
+    try:
+        # 后端统一校验
+        can_info = review_service.can_update_review(current_email)
+        if not can_info.get("can_update"):
+            raise HTTPException(status_code=409, detail=can_info.get("reason", "暂不满足更新条件"))
+
+        result = review_service.generate_review(current_email)
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "生成复盘失败"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in create_or_update_review: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

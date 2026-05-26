@@ -558,3 +558,76 @@ def update_daily_stats_for_date(user_email: Optional[str], date_str: str, count:
     stats = get_or_build_daily_stats(user_email)
     stats[date_str] = stats.get(date_str, 0) + count
     _save_daily_stats(stats, user_email)
+
+
+# ==================== 复盘文件 ====================
+
+REVIEW_FILENAME = "review.md"
+
+
+def get_review_path(user_email: Optional[str] = None) -> str:
+    """获取复盘正文文件路径"""
+    base_dir = _get_user_base_dir(user_email)
+    return os.path.join(base_dir, REVIEW_FILENAME)
+
+
+def load_review(user_email: Optional[str] = None) -> str:
+    """加载复盘正文，不存在返回空字符串"""
+    path = get_review_path(user_email)
+    if not os.path.exists(path):
+        return ""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return ""
+
+
+def save_review(content: str, user_email: Optional[str] = None):
+    """保存复盘正文到用户目录"""
+    path = get_review_path(user_email)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
+def load_all_archived_diaries_for_review(user_email: Optional[str] = None,
+                                         max_chars: int = 30000) -> list:
+    """
+    扫描用户所有归档日记（排除草稿），按日期升序返回用户发言语料。
+
+    返回 [{"date": str, "user_text": str}]，仅包含用户消息。
+    总字数超过 max_chars 时从最早的日记开始丢弃，保留最近的内容。
+    """
+    diaries_dir = _get_diaries_dir(user_email)
+    if not os.path.exists(diaries_dir):
+        return []
+
+    archive_files = [f for f in os.listdir(diaries_dir)
+                     if f.startswith("diary_") and f.endswith(".md")
+                     and "_draft" not in f]
+    # 按日期+索引升序
+    archive_files.sort(key=_sort_diary_files)
+
+    items = []
+    for filename in archive_files:
+        filepath = os.path.join(diaries_dir, filename)
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                content = f.read()
+        except Exception:
+            continue
+        date_str = _extract_date_from_archive(filename)
+        user_text = _extract_conversation_from_archive(content)
+        if not user_text:
+            continue
+        items.append({"date": date_str, "user_text": user_text})
+
+    # 总字数控制：超限时从头部（最早日期）丢弃
+    def _total_len(arr):
+        return sum(len(it["user_text"]) + len(it["date"]) + 8 for it in arr)
+
+    while items and _total_len(items) > max_chars:
+        items.pop(0)
+
+    return items
