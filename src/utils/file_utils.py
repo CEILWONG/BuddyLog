@@ -106,17 +106,33 @@ def _extract_date_from_archive(filename: str) -> str:
 
 
 def _extract_conversation_from_archive(content: str) -> str:
-    """从归档文件内容提取用户对话记录（只保留用户消息，去掉MOSS回复）"""
+    """从归档文件内容提取用户对话记录（只保留用户消息，去掉MOSS回复）
+
+    兼容两种归档格式：
+    - 旧格式：**用户**: 内容
+    - 新格式：> 🙋 **[HH:MM:SS] 用户**: **内容**
+    """
     match = re.search(r'## 对话记录\s*\n(.*?)(?=\n## |\Z)', content, re.DOTALL)
     if match:
         conversation = match.group(1).strip()
-        # 只保留用户消息（以**用户**:开头的行）
         user_lines = []
         for line in conversation.split('\n'):
-            if line.strip().startswith('**用户**:'):
-                # 去掉前缀，只保留内容
-                user_content = line.strip().replace('**用户**:', '').strip()
+            stripped = line.strip()
+            # 旧格式：**用户**: 内容
+            if stripped.startswith('**用户**:'):
+                user_content = stripped.replace('**用户**:', '', 1).strip()
                 user_lines.append(user_content)
+            # 新格式：> 🙋 **[HH:MM:SS] 用户**: **内容**
+            elif '用户**:' in stripped or '用户**：' in stripped:
+                # 提取 用户**: 后面的内容
+                m = re.search(r'用户\*\*[:：]\s*(.*)', stripped)
+                if m:
+                    user_content = m.group(1).strip()
+                    # 去掉包裹的 ** **
+                    if user_content.startswith('**') and user_content.endswith('**'):
+                        user_content = user_content[2:-2].strip()
+                    if user_content:
+                        user_lines.append(user_content)
         return '\n'.join(user_lines)
     return ""
 

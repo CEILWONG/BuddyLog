@@ -18,7 +18,7 @@ from src.utils.user_utils import (
 
 # 更新条件常量
 REQUIRED_DAYS = 1
-REQUIRED_DELTA = 5
+REQUIRED_DELTA = 2
 
 
 class ReviewService:
@@ -132,7 +132,22 @@ class ReviewService:
             f"【{item['date']}】\n{item['user_text']}" for item in diaries
         )
 
-        prompt = self._build_prompt(diary_text)
+        # 计算日期锚点，防止 AI 焦集于早期月份、忽略近期
+        today = datetime.date.today()
+        diary_dates = [it["date"] for it in diaries if it.get("date")]
+        earliest = diary_dates[0] if diary_dates else today.isoformat()
+        latest = diary_dates[-1] if diary_dates else today.isoformat()
+        # 统计跨越月份数，用于动态收紧/放宽约束
+        unique_months = sorted({d[:7] for d in diary_dates}) if diary_dates else []
+        span_months = len(unique_months)
+
+        prompt = self._build_prompt(
+            diary_text,
+            today_str=today.isoformat(),
+            earliest=earliest,
+            latest=latest,
+            span_months=span_months,
+        )
         messages = [{"role": "system", "content": prompt}]
 
         extra_body = {"enable_thinking": self.enable_thinking}
@@ -181,13 +196,48 @@ class ReviewService:
 
     # ---------------- 内部工具 ----------------
 
-    def _build_prompt(self, diary_text: str) -> str:
+    def _build_prompt(
+        self,
+        diary_text: str,
+        today_str: str = "",
+        earliest: str = "",
+        latest: str = "",
+        span_months: int = 1,
+    ) -> str:
         """构建复盘 system prompt，强约束三段式输出
 
         说明：仅以用户原始发言为唯一语料，不投喂长期记忆、AI 回复、日记总结等交叉产物，
-        避免多轮推论偏差。"""
-        return f"""你是一位高级心理成长学专家，同时也是这位用户的私人观察者。请仅基于用户亲口说出的原始话语（日记中的本人发言），为TA撰写一篇高质量的复盘报告。
+        避免多轮推论偏差。同时注入时间锚点与分布约束，防止「高光焦集于早期月份」的偏斜问题。"""
 
+        # 动态生成「时间分布」约束文案
+        if span_months >= 3:
+            distribution_rule = (
+                f"- 【时间分布硬约束】日记跨越 {span_months} 个月份，不得出现“高光集中某一个月”的现象：\n"
+                f"  * 同一月份最多 2 条高光；\n"
+                f"  * 至少覆盖 3 个不同月份；\n"
+                f"  * 必须至少包含 2 条来自最近 30 天内的高光（即不早于「今天减 30 天」的日期）。如日记中近 30 天确无高光，可改为最近 60 天内的 2 条；仍无则明确说明。\n"
+                f"- 按时间倒序排列（新→旧），第一条必须是最近期的。"
+            )
+        elif span_months == 2:
+            distribution_rule = (
+                "- 【时间分布硬约束】日记跨越 2 个月份，两个月都必须有代表高光且数量差异不得超过 2 条；\n"
+                "- 按时间倒序排列（新→旧），第一条必须是近期的。"
+            )
+        else:
+            distribution_rule = (
+                "- 按时间倒序排列（新→旧），优先选近期高光。"
+            )
+
+        date_anchor = ""
+        if today_str:
+            date_anchor = (
+                f"\n【时间锚点】今天是 {today_str}；"
+                f"日记时间跨度：{earliest} → {latest}（共 {span_months} 个月份）。\n"
+                "请以今天为参考系，明确区分「近期 / 远期」，不要被早期信息量大的月份吊走注意力。"
+            )
+
+        return f"""你是一位高级心理成长学专家，同时也是这位用户的私人观察者。请仅基于用户亲口说出的原始话语（日记中的本人发言），为TA撰写一篇高质量的复盘报告。
+{date_anchor}
 【输入资料】
 
 # 用户历史日记（按日期升序，仅含用户本人发言）
@@ -208,15 +258,18 @@ class ReviewService:
 - 仅基于用户日记原话，凝练 3-5 条客观画像，覆盖性格特质、当前关注点、近期状态、价值倾向等。
 - 每条一行，使用无序列表（- 开头）。
 - 描述需具体而克制，避免空洞的赞美或贴标签。
+- 「近期状态」部分必须反映最近 30 天内的表达，不要拿几个月前的状态充数。
 
 ## 回忆高光
 - 从所有日记中挑选值得被记住的好时刻，分点列出（无序列表）。
-- 每条一行，格式建议：`- 【YYYY-MM-DD】简洁描述具体事件或场景`。
-- 数量 4-8 条，覆盖不同主题或时间段，按时间倒序（新→旧）。
+- 每条一行，格式严格为：`- 【YYYY-MM-DD】简洁描述具体事件或场景`，日期必须取自日记原始日期。
+- 数量 4-8 条，覆盖不同主题与不同时间段。
+{distribution_rule}
 - 只挑选日记中真实出现过的高光时刻，不要泛泛而谈。
+- 输出前请自检：高光日期是否集中于某一两个月？若是，必须重新调整。
 
 ## 洞察
-- 先用 1-2 段（每段 2-4 句）分析最近的性格倾向、情绪波动和主要关注点，语气真诚、专业、富同理心。
+- 先用 1-2 段（每段 2-4 句）分析最近的性格倾向、情绪波动和主要关注点，语气真诚、专业、富同理心。「最近」严格指最近 30 天内的日记。
 - 然后另起一行，使用 `### 发散性问题` 三级小节，列出 1-2 个值得用户深思的开放式问题（无序列表）。
 - 然后另起一行，使用 `### 未来一段时间的建议` 三级小节，给出 3-5 条针对生活/工作的可执行建议（无序列表，每条一行）。
 - 全部基于日记真实内容推演，不要给出与用户处境无关的通用鸡汤。
