@@ -145,7 +145,8 @@ async def get_me(current_email: str = Depends(get_current_user)):
         "created_at": user_info["created_at"],
         "settings": user_info.get("settings", {}),
         "usage": user_info.get("usage", {}),
-        "effective_daily_limit": effective_limit
+        "effective_daily_limit": effective_limit,
+        "model_name": MODEL
     }
 
 

@@ -57,6 +57,7 @@ class UserProfileResponse(BaseModel):
     settings: UserSettings
     usage: UserUsage
     effective_daily_limit: int = 20  # 实际生效的每日对话限制
+    model_name: str = ""  # 系统当前使用的大模型名称
 
 
 class SettingsUpdateRequest(BaseModel):

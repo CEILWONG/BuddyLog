@@ -1926,9 +1926,9 @@
                 <p class="hint">如需使用自己的 API Key，请在此输入</p>
             </div>
             <div class="settings-item">
-                <label for="setting-profile">自定义 Profile 文件</label>
-                <input type="text" id="setting-profile" placeholder="使用系统默认" disabled>
-                <p class="hint">自定义人设文件路径（相对或绝对路径）</p>
+                <label>使用大模型</label>
+                <p id="setting-model-name" style="font-size: 0.95rem; color: #2d3436; font-weight: 600; margin: 4px 0;">加载中...</p>
+                <p class="hint">由系统管理员在环境变量中配置</p>
             </div>
         </div>
     </div>
@@ -2082,8 +2082,8 @@
                     <p id="mobile-setting-apikey">使用系统默认</p>
                 </div>
                 <div class="mobile-setting-item">
-                    <label>Profile 文件</label>
-                    <p id="mobile-setting-profile">使用系统默认</p>
+                    <label>使用大模型</label>
+                    <p id="mobile-setting-model-name">加载中...</p>
                 </div>
             </div>
             
@@ -2196,8 +2196,7 @@
         const apiKey = currentUser.settings?.api_key;
         document.getElementById('mobile-setting-apikey').textContent = apiKey ? '已设置' : '使用系统默认';
         
-        const profileFile = currentUser.settings?.profile_file;
-        document.getElementById('mobile-setting-profile').textContent = profileFile || '使用系统默认';
+        document.getElementById('mobile-setting-model-name').textContent = currentUser.model_name || '系统默认';
         
         mobileUserModal.classList.add('active');
     }
@@ -2399,7 +2398,7 @@
         
         // 填充高级设置（用户值为null时显示空，展示placeholder）
         document.getElementById('setting-apikey').value = currentUser.settings?.api_key || '';
-        document.getElementById('setting-profile').value = currentUser.settings?.profile_file || '';
+        document.getElementById('setting-model-name').textContent = currentUser.model_name || '系统默认';
         
         document.getElementById('settings-modal').style.display = 'flex';
     }
