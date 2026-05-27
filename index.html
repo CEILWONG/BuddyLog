@@ -362,6 +362,32 @@
             align-items: center;
             gap: 8px;
         }
+
+        /* 桌面端侧边栏月份分组适配 */
+        .file-list .archive-month-group {
+            margin: 4px 0;
+        }
+
+        .file-list .archive-month-header {
+            padding: 8px 10px;
+            font-size: 0.82rem;
+            border-radius: 8px;
+        }
+
+        .file-list .archive-month-label {
+            font-size: 0.82rem;
+        }
+
+        .file-list .archive-month-count {
+            font-size: 0.7rem;
+            padding: 1px 7px;
+        }
+
+        .file-list .archive-month-content {
+            padding: 4px 0 4px 8px;
+            margin: 2px 0 2px 8px;
+            gap: 2px;
+        }
         
         .file-item:hover { 
             background: #fff5f5;
@@ -2983,13 +3009,52 @@
                 list.appendChild(div);
             });
 
-            diaryFiles.forEach(f => {
-                const div = document.createElement('div');
-                div.className = 'file-item';
-                div.innerHTML = `📓 ${f.replace('.md', '').replace('diary_', '')}`;
-                div.onclick = (e) => showReader(f);
-                list.appendChild(div);
-            });
+            // 日记文件按月份分组折叠显示
+            if (diaryFiles.length > 0) {
+                const monthGroups = {};
+                diaryFiles.forEach(f => {
+                    const match = f.match(/diary_(\d{4})-(\d{2})-\d{2}_\d+\.md/);
+                    const monthKey = match ? `${match[1]}-${match[2]}` : '未分类';
+                    if (!monthGroups[monthKey]) monthGroups[monthKey] = [];
+                    monthGroups[monthKey].push(f);
+                });
+
+                const sortedMonths = Object.keys(monthGroups).sort().reverse();
+
+                sortedMonths.forEach((monthKey, idx) => {
+                    const monthFiles = monthGroups[monthKey];
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'archive-month-group';
+                    if (idx === 0) groupDiv.classList.add('expanded');
+
+                    const labelText = monthKey === '未分类'
+                        ? '未分类'
+                        : `${monthKey.split('-')[0]}年${monthKey.split('-')[1]}月`;
+
+                    const header = document.createElement('div');
+                    header.className = 'archive-month-header';
+                    header.innerHTML = `
+                        <span class="archive-month-icon">▶</span>
+                        <span class="archive-month-label">${labelText}</span>
+                        <span class="archive-month-count">${monthFiles.length}</span>
+                    `;
+                    header.onclick = () => groupDiv.classList.toggle('expanded');
+
+                    const content = document.createElement('div');
+                    content.className = 'archive-month-content';
+                    monthFiles.forEach(f => {
+                        const div = document.createElement('div');
+                        div.className = 'file-item';
+                        div.innerHTML = `📓 ${f.replace('.md', '').replace('diary_', '')}`;
+                        div.onclick = (e) => showReader(f);
+                        content.appendChild(div);
+                    });
+
+                    groupDiv.appendChild(header);
+                    groupDiv.appendChild(content);
+                    list.appendChild(groupDiv);
+                });
+            }
         } catch (e) {
             document.getElementById('file-list').innerHTML = '<div class="empty-state">加载失败</div>';
         }
