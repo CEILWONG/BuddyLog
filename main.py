@@ -201,6 +201,9 @@ async def chat(msg: Message, current_email: str = Depends(get_current_user)):
         tokens_total = tokens_data.get("total", 0) if isinstance(tokens_data, dict) else tokens_data
         update_user_usage(current_email, conversations_increment=1, tokens_increment=tokens_total)
         
+        # 本轮是今天的第几轮对话
+        result["today_count"] = limit_check["current"] + 1
+        
         return result
     except HTTPException:
         raise

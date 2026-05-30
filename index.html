@@ -3349,7 +3349,8 @@
 
             const note = document.createElement('div');
             note.className = 'system-note';
-            note.innerText = `◉ MOSS 已记下`;
+            const todayCount = data.today_count ? ` · 今日第${data.today_count}轮` : '';
+            note.innerText = `◉ MOSS 已记下${todayCount}`;
             targetChatBox.appendChild(note);
 
             // 显示后台归档提示（放到最后）
