@@ -226,6 +226,64 @@ class ChatService:
         
         return result
     
+    def generate_greeting(self, user_email: str = None) -> str:
+        """生成个性化开场白"""
+        persona = extract_agent_persona(user_email)
+        memory = load_memory(user_email)
+        recent_diaries = load_recent_diaries(user_email)
+        
+        now = datetime.datetime.now()
+        weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+        weekday = weekdays[now.weekday()]
+        date_str = now.strftime('%Y-%m-%d')
+        time_str = now.strftime('%H:%M:%S')
+        
+        recent_text = '\n'.join(recent_diaries[:3]) if recent_diaries else '暂无近期的日记记录'
+        
+        greeting_prompt = f"""【任务】生成一句开场白
+
+当前时间：{date_str} {weekday} {time_str}
+
+【长期记忆】
+{memory if memory else '暂无长期记忆'}
+
+【近期日记】
+{recent_text}
+
+【要求】
+请生成一个开场白，要求：
+1. 如果长期记忆中有用户的小名/昵称/称呼偏好，用那个称呼用户（不要用"用户"或"你"，直接用名字）
+2. 结合今天的日期（{weekday}）和长期记忆中用户的习惯/兴趣，闲聊1-2句
+3. 最后，自然地问用户今天想写点什么日记，引导分享
+4. 整体风格：温暖、简短、像老朋友打招呼，保持在3-5句话以内
+5. 用纯文本输出，不要加任何 JSON 包装、代码块或格式标记
+
+请直接输出开场白内容："""
+        
+        messages = [
+            {"role": "system", "content": f"{persona if persona else '你是一个陪用户聊日常的老朋友，语气温暖自然。'}"},
+            {"role": "user", "content": greeting_prompt}
+        ]
+        
+        extra_body = {"enable_thinking": self.enable_thinking}
+        
+        try:
+            response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                extra_body=extra_body
+            )
+            reply = response.choices[0].message.content.strip()
+            # 清洗可能的格式标记
+            if reply.startswith('```'):
+                reply = reply.split('\n', 1)[-1] if '\n' in reply else reply[3:]
+            if reply.endswith('```'):
+                reply = reply[:-3]
+            return reply.strip()
+        except Exception as e:
+            print(f"生成开场白失败: {e}")
+            return f"早上好。今天是{date_str} {weekday}。\n今天想记录些什么呢？"
+    
     def _background_archive(self, user_email: str = None):
         """后台执行归档（不阻塞主流程）"""
         try:

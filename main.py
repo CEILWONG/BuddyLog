@@ -300,6 +300,13 @@ async def get_announcement():
         return {"content": default_message}
 
 
+@app.get("/greeting")
+async def get_greeting(current_email: str = Depends(get_current_user)):
+    """生成个性化AI开场白（需认证）"""
+    greeting = chat_service.generate_greeting(current_email)
+    return {"greeting": greeting}
+
+
 @app.post("/archive")
 async def archive_diary(req: ArchiveRequest, current_email: str = Depends(get_current_user)):
     """手动触发日记归档"""
