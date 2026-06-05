@@ -1262,6 +1262,44 @@
             margin-bottom: 10px;
             padding-left: 5px;
         }
+
+        /* 草稿标题行 + 归档按钮 */
+        .draft-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .draft-archive-btn {
+            padding: 4px 12px;
+            border: 1px solid #e17055;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+            color: #e17055;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .draft-archive-btn:hover {
+            background: linear-gradient(135deg, #e17055 0%, #fab1a0 100%);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .draft-archive-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 桌面端侧边栏的归档按钮行 */
+        .draft-archive-row {
+            padding: 6px 0;
+            display: flex;
+            justify-content: center;
+        }
         
         .archive-items {
             display: flex;
@@ -1976,7 +2014,6 @@
         <div id="input-area">
             <textarea id="user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
             <button onclick="sendMessage()" id="send-btn" class="btn-primary">发送</button>
-            <button onclick="completeToday()" id="complete-btn" class="btn-secondary">归档</button>
         </div>
     </div>
     
@@ -2016,7 +2053,6 @@
         <div id="input-area">
             <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
             <button onclick="sendMessage()" id="mobile-send-btn" class="btn-primary">发送</button>
-            <button onclick="completeToday()" id="mobile-complete-btn" class="btn-secondary">归档</button>
         </div>
     </div>
     
@@ -3036,6 +3072,14 @@
                 list.appendChild(div);
             });
 
+            // 归档按钮放在草稿区域下方
+            if (draftFiles.length > 0) {
+                const archiveRow = document.createElement('div');
+                archiveRow.className = 'draft-archive-row';
+                archiveRow.innerHTML = '<button class="draft-archive-btn" onclick="completeToday()">📦 归档今日</button>';
+                list.appendChild(archiveRow);
+            }
+
             // 日记文件按月份分组折叠显示
             if (diaryFiles.length > 0) {
                 const monthGroups = {};
@@ -3144,7 +3188,10 @@
             if (draftFiles.length > 0) {
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'archive-category';
-                categoryDiv.innerHTML = '<div class="archive-category-title">📝 今日草稿</div>';
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'archive-category-title draft-title-row';
+                titleDiv.innerHTML = '<span>📝 今日草稿</span><button class="draft-archive-btn" onclick="completeToday()">📦 归档今日</button>';
+                categoryDiv.appendChild(titleDiv);
                 const itemsDiv = document.createElement('div');
                 itemsDiv.className = 'archive-items';
                 
@@ -3412,11 +3459,22 @@
     loadFiles();
 
     async function completeToday() {
+        if (history.length === 0) {
+            const targetChatBox = isMobile() ? document.querySelector('#mobile-chat-view #chat-box') : chatBox;
+            const note = document.createElement('div');
+            note.className = 'system-note';
+            note.style.color = '#e17055';
+            note.innerText = '◉ 今天还没有聊天记录。如果有前些天未归档的草稿，开始聊天后会自动归档。';
+            targetChatBox.appendChild(note);
+            targetChatBox.scrollTop = targetChatBox.scrollHeight;
+            return;
+        }
+
         const sendBtnEl = isMobile() ? document.getElementById('mobile-send-btn') : sendBtn;
-        const completeBtnEl = isMobile() ? document.getElementById('mobile-complete-btn') : document.getElementById('complete-btn');
+        const archiveBtns = document.querySelectorAll('.draft-archive-btn');
         
         sendBtnEl.disabled = true;
-        completeBtnEl.disabled = true;
+        archiveBtns.forEach(btn => btn.disabled = true);
 
         const loadingNote = document.createElement('div');
         loadingNote.className = 'system-note';
@@ -3470,7 +3528,7 @@
             alert('网络错误，请稍后再试');
         } finally {
             sendBtnEl.disabled = false;
-            completeBtnEl.disabled = false;
+            archiveBtns.forEach(btn => btn.disabled = false);
         }
     }
 

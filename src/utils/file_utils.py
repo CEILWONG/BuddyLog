@@ -333,9 +333,16 @@ def finalize_diary(structured_data: dict, conversation: list, diary_article: str
     
     # 按需删除草稿
     if delete_draft:
-        draft_path = get_today_draft_file(user_email)
-        if draft_path:
-            os.remove(draft_path)
+        if draft_date:
+            # 使用锁定的日期找草稿，防止跨午夜时 today() 变化
+            draft_filename = f"diary_{draft_date.isoformat()}_draft.md"
+            draft_path = os.path.join(diaries_dir, draft_filename)
+            if os.path.exists(draft_path):
+                os.remove(draft_path)
+        else:
+            draft_path = get_today_draft_file(user_email)
+            if draft_path:
+                os.remove(draft_path)
     
     return filename
 

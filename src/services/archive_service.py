@@ -8,7 +8,8 @@ from src.utils.file_utils import (
     finalize_diary, 
     get_today_draft_file, 
     _load_md_file, 
-    _extract_conversation_from_draft
+    _extract_conversation_from_draft,
+    _parse_draft_date
 )
 from src.services.memory_service import MemoryService
 from openai import OpenAI
@@ -200,7 +201,10 @@ class ArchiveService:
         """手动归档今日（点击"完成今日"按钮）"""
         # 优先从草稿文件读取完整对话，确保不丢失任何消息
         draft_path = get_today_draft_file(user_email)
+        draft_date = None
         if draft_path and os.path.exists(draft_path):
+            # 从草稿文件名锁定日期，防止跨午夜时 today() 变化
+            draft_date = _parse_draft_date(os.path.basename(draft_path))
             with open(draft_path, "r", encoding="utf-8") as f:
                 content = f.read()
             conversation = _extract_conversation_from_draft(content)
@@ -212,7 +216,7 @@ class ArchiveService:
                 "error": "今天还没有聊天记录，无法完成记录"
             }
 
-        return self.archive(conversation, delete_draft=True, user_email=user_email)
+        return self.archive(conversation, draft_date=draft_date, delete_draft=True, user_email=user_email)
     
     def auto_archive_from_draft(self, conversation: list, draft_date: date, user_email: str = None) -> Dict[str, Any]:
         """自动归档过期草稿（指定日期，由 auto_archive_expired_drafts 调用）"""
