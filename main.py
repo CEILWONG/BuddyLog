@@ -1,8 +1,9 @@
 import os
 import io
+import base64
 import zipfile
 from datetime import datetime, date
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from dotenv import load_dotenv
@@ -182,6 +183,49 @@ async def read_root():
     index_path = os.path.join(os.path.dirname(__file__), "index.html")
     with open(index_path, "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
+
+
+@app.post("/speech-to-text")
+async def speech_to_text(audio: UploadFile = File(...), current_email: str = Depends(get_current_user)):
+    """语音转文字接口：使用 DashScope qwen3-asr-flash 模型"""
+    try:
+        audio_data = await audio.read()
+        # 音频转 Base64 Data URI
+        content_type = audio.content_type or "audio/webm"
+        base64_str = base64.b64encode(audio_data).decode()
+        data_uri = f"data:{content_type};base64,{base64_str}"
+
+        # 调用 DashScope 语音识别模型
+        completion = openai_client.chat.completions.create(
+            model="qwen3-asr-flash",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_audio",
+                            "input_audio": {
+                                "data": data_uri
+                            }
+                        }
+                    ]
+                }
+            ],
+            stream=False,
+            extra_body={
+                "asr_options": {
+                    "language": "zh",
+                    "enable_itn": True
+                }
+            }
+        )
+        text = completion.choices[0].message.content if completion.choices else ""
+        return {"text": text}
+    except Exception as e:
+        print(f"Speech-to-text error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"语音识别失败: {str(e)}")
 
 
 @app.post("/chat")

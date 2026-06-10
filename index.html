@@ -1886,6 +1886,39 @@
                 font-size: 0.85rem;
             }
         }
+
+        /* ==================== 语音输入按钮样式 ==================== */
+        .voice-toggle-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid #ffeaa7;
+            background: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            display: none; /* 默认隐藏，仅移动端显示 */
+        }
+
+        .voice-toggle-btn.recording {
+            background: linear-gradient(135deg, #ff7675 0%, #fd79a8 100%);
+            border-color: #ff7675;
+            animation: voicePulse 1s infinite;
+        }
+
+        @keyframes voicePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        @media screen and (max-width: 768px) {
+            .voice-toggle-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -2051,6 +2084,7 @@
             <div class="message buddy" id="welcome-message-mobile">系统启动完成。<br>我是 MOSS，550W 量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
         </div>
         <div id="input-area">
+            <button id="mobile-voice-toggle" class="voice-toggle-btn" onclick="toggleVoiceRecord()">🎤</button>
             <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
             <button onclick="sendMessage()" id="mobile-send-btn" class="btn-primary">发送</button>
         </div>
@@ -3601,6 +3635,121 @@
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalText;
+        }
+    }
+
+    // ==================== 语音输入功能（后端识别） ====================
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    // 点击麦克风按钮：开始/停止录音
+    async function toggleVoiceRecord() {
+        if (isRecording) {
+            voiceRecordStop();
+        } else {
+            await voiceRecordStart();
+        }
+    }
+
+    // 开始录音
+    async function voiceRecordStart() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // 优先使用 webm/opus，回退到浏览器支持的格式
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+                ? 'audio/webm;codecs=opus' 
+                : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '');
+            mediaRecorder = mimeType 
+                ? new MediaRecorder(stream, { mimeType }) 
+                : new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = function(event) {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async function() {
+                // 停止所有音轨
+                stream.getTracks().forEach(track => track.stop());
+                if (audioChunks.length === 0) return;
+
+                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                console.log('[语音] 录音完成，大小:', (audioBlob.size / 1024).toFixed(1), 'KB');
+                await uploadAudioForTranscription(audioBlob);
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            const toggleBtn = document.getElementById('mobile-voice-toggle');
+            const inputEl = document.getElementById('mobile-user-input');
+            toggleBtn.classList.add('recording');
+            toggleBtn.textContent = '⏹';
+            inputEl.placeholder = '🎙️ 正在录音...';
+            console.log('[语音] 开始录音, 格式:', mediaRecorder.mimeType);
+        } catch (e) {
+            console.error('[语音] 无法获取麦克风:', e);
+            if (e.name === 'NotAllowedError') {
+                alert('请允许麦克风权限以使用语音输入');
+            } else {
+                alert('无法启动麦克风，请检查设备');
+            }
+        }
+    }
+
+    // 停止录音
+    function voiceRecordStop() {
+        isRecording = false;
+        const toggleBtn = document.getElementById('mobile-voice-toggle');
+        const inputEl = document.getElementById('mobile-user-input');
+        toggleBtn.classList.remove('recording');
+        toggleBtn.textContent = '🎤';
+        inputEl.placeholder = '⚙️ 识别中...';
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+    }
+
+    // 上传音频到后端进行识别
+    async function uploadAudioForTranscription(audioBlob) {
+        const toggleBtn = document.getElementById('mobile-voice-toggle');
+        const inputEl = document.getElementById('mobile-user-input');
+        toggleBtn.disabled = true;
+
+        try {
+            const formData = new FormData();
+            const ext = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
+            formData.append('audio', audioBlob, `voice.${ext}`);
+
+            const res = await fetch('/speech-to-text', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                body: formData
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || `HTTP ${res.status}`);
+            }
+
+            const data = await res.json();
+            if (data.text && data.text.trim()) {
+                inputEl.value += data.text.trim();
+                autoResize(inputEl);
+                inputEl.placeholder = '向 MOSS 输入数据...';
+                console.log('[语音] 识别结果:', data.text);
+            } else {
+                inputEl.placeholder = '向 MOSS 输入数据...';
+                console.log('[语音] 未识别到文字');
+            }
+        } catch (e) {
+            console.error('[语音] 识别失败:', e);
+            inputEl.placeholder = '向 MOSS 输入数据...';
+            alert('语音识别失败: ' + e.message);
+        } finally {
+            toggleBtn.disabled = false;
         }
     }
 
