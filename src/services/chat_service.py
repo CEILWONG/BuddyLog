@@ -39,17 +39,15 @@ class ChatService:
         recent_diaries_text = "\n\n".join(recent_diaries[:7]) if recent_diaries else '刚认识不久'
 
         # 获取当前日期和星期
+        # 注意：不注入秒级/分钟级时间——高频变化的内容会破坏提供商的 prefix cache，
+        # 导致 system prompt 中大量固定内容每轮都全价计费。日期一天才变一次，缓存友好。
         now = datetime.datetime.now()
         weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
         weekday = weekdays[now.weekday()]
         date_str = now.strftime('%Y-%m-%d')
-        time_str = now.strftime('%H:%M:%S')
 
-        system_prompt = f"""【系统状态】
-当前日期：{date_str} {weekday}
-当前时间：{time_str}
-
-{persona if persona else '你是 Moss,一个陪用户聊每天日常的老朋友。'}
+        # 系统状态放在 prompt 末尾（易变内容后置），保证固定部分作为稳定前缀命中缓存
+        system_prompt = f"""{persona if persona else '你是 Moss,一个陪用户聊每天日常的老朋友。'}
 
 【记住的事】
 {memory if memory else '暂时还不了解太多'}
@@ -136,7 +134,10 @@ class ChatService:
 - 禁止扮演分析师：你不是在做数据分析，是在和朋友闲聊
 - 禁止"脑补"情节：如果【记住的事】和【最近聊的】里没有提到，你绝对不能说"记得你..."
 - 如果不确定具体数据，只说定性结论（如"有一段时间了"、"比上次久"），绝不用数字
-- 如果不确定具体细节，直接说"我记得你提过这件事，但具体细节我记不清了"，绝不编造"""
+- 如果不确定具体细节，直接说"我记得你提过这件事，但具体细节我记不清了"，绝不编造
+
+【系统状态】
+当前日期：{date_str} {weekday}"""
 
         return system_prompt
     
@@ -223,6 +224,12 @@ class ChatService:
                 'output': output_tokens,
                 'total': total_tokens
             }
+            # 观测 prefix cache 命中情况（DashScope/DeepSeek 与 OpenAI 两种字段风格）
+            cache_hit = getattr(usage, "prompt_cache_hit_tokens", None)
+            if cache_hit is None:
+                details = getattr(usage, "prompt_tokens_details", None)
+                cache_hit = getattr(details, "cached_tokens", None) if details else None
+            print(f"[TokenUsage] user={user_email} input={input_tokens} cached={cache_hit} output={output_tokens}")
         
         return result
     
@@ -236,7 +243,8 @@ class ChatService:
         weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
         weekday = weekdays[now.weekday()]
         date_str = now.strftime('%Y-%m-%d')
-        time_str = now.strftime('%H:%M:%S')
+        # 只保留小时粒度（供开场白感知时段），避免秒级时间破坏 prefix cache
+        time_str = now.strftime('%H:00')
         
         recent_text = '\n'.join(recent_diaries[:3]) if recent_diaries else '暂无近期的日记记录'
         
