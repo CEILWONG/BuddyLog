@@ -1640,6 +1640,23 @@
             font-weight: 600;
         }
         
+        /* 支持 MOSS 入口（链接风格，明确的点击暗示） */
+        .donate-note {
+            cursor: pointer;
+            background: #fff;
+            border: 1.5px dashed #fd79a8;
+            color: #fd79a8;
+            transition: all 0.2s;
+        }
+        
+        .donate-note:hover {
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
+            color: #fff;
+            border-color: transparent;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(253, 121, 168, 0.35);
+        }
+        
         /* 正在输入动画 */
         .typing {
             display: flex;
@@ -1739,7 +1756,7 @@
         }
         
         /* 弹窗 */
-        #archive-modal {
+        #archive-modal, #donate-modal {
             display: none;
             position: fixed;
             top: 0;
@@ -1749,6 +1766,16 @@
             background: rgba(0,0,0,0.5);
             z-index: 1000;
             backdrop-filter: blur(5px);
+        }
+        
+        /* 捐赠弹窗二维码 */
+        .donate-qr {
+            display: block;
+            width: 220px;
+            max-width: 100%;
+            margin: 16px auto;
+            border-radius: 12px;
+            border: 2px solid #ffeaa7;
         }
         
         .modal-content {
@@ -2200,6 +2227,21 @@
             <button onclick="cancelArchive()" class="btn-cancel">取消</button>
             <button onclick="confirmArchive()" class="btn-confirm">确认归档</button>
         </div>
+    </div>
+</div>
+
+<!-- 支持 MOSS 捐赠弹窗 -->
+<div id="donate-modal" onclick="closeDonateModal()">
+    <div class="modal-content" style="max-width: 380px; text-align: center;" onclick="event.stopPropagation()">
+        <h2 style="color: #fd79a8;">💛 支持 MOSS</h2>
+        <img class="donate-qr" src="/donate-qrcode" alt="捐赠二维码" onerror="this.style.display='none'; document.getElementById('donate-qr-fallback').style.display='block';">
+        <p id="donate-qr-fallback" style="display:none; color:#636e72; font-size:0.85rem;">捐赠二维码暂未配置</p>
+        <p style="color: #636e72; font-size: 0.9rem; line-height: 1.7; margin: 0 0 20px 0;">
+            MOSS 的运行需要消耗服务器与大模型算力资源。<br>
+            如果你愿意，可以自愿捐助一点，帮助维持运行。<br>
+            捐赠完全自愿，不会影响任何功能的使用。
+        </p>
+        <button onclick="closeDonateModal()" class="btn-cancel">关闭</button>
     </div>
 </div>
 
@@ -3464,6 +3506,14 @@
             note.innerText = `◉ MOSS 已记下${todayCount}`;
             targetChatBox.appendChild(note);
 
+            // 支持 MOSS 捐赠入口（链接风格，明确的点击暗示）
+            const donateNote = document.createElement('div');
+            donateNote.className = 'system-note donate-note';
+            donateNote.innerText = '💛 支持 MOSS · 点击捐赠';
+            donateNote.title = '自愿捐赠，维持 MOSS 运行';
+            donateNote.onclick = openDonateModal;
+            targetChatBox.appendChild(donateNote);
+
             // 显示后台归档提示（放到最后）
             if (data.archiving_notice) {
                 const archivingNote = document.createElement('div');
@@ -3568,6 +3618,15 @@
 
     function cancelArchive() {
         document.getElementById('archive-modal').style.display = 'none';
+    }
+
+    // ==================== 支持 MOSS 捐赠弹窗 ====================
+    function openDonateModal() {
+        document.getElementById('donate-modal').style.display = 'block';
+    }
+
+    function closeDonateModal() {
+        document.getElementById('donate-modal').style.display = 'none';
     }
 
     function confirmArchive() {

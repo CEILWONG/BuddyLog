@@ -349,6 +349,23 @@ async def get_announcement():
         return {"content": default_message}
 
 
+@app.get("/donate-qrcode")
+async def get_donate_qrcode():
+    """返回捐赠二维码图片（无需认证），图片放在 DATA_DIR 下"""
+    from src.utils.file_utils import DATA_DIR
+    candidates = {
+        "donate.png": "image/png",
+        "donate.jpg": "image/jpeg",
+        "donate.jpeg": "image/jpeg",
+        "donate.webp": "image/webp",
+    }
+    for name, media_type in candidates.items():
+        path = os.path.join(DATA_DIR, name)
+        if os.path.exists(path):
+            return FileResponse(path, media_type=media_type)
+    raise HTTPException(status_code=404, detail="Donation QR code not configured")
+
+
 @app.get("/greeting")
 async def get_greeting(current_email: str = Depends(get_current_user)):
     """生成个性化AI开场白（需认证）"""
