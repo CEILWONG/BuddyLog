@@ -13,6 +13,8 @@ from src.utils.user_utils import (
     get_user_by_email,
     get_user_review_meta,
     update_user_review_meta,
+    extract_usage_tokens,
+    update_user_usage,
 )
 
 
@@ -167,6 +169,11 @@ class ReviewService:
                 "success": False,
                 "error": "AI 未返回有效内容，请稍后再试",
             }
+
+        # 复盘的 LLM 消耗记账（只计 tokens 不计对话轮次）
+        review_tokens = extract_usage_tokens(getattr(response, "usage", None))
+        if review_tokens > 0:
+            update_user_usage(user_email, tokens_increment=review_tokens)
 
         # 写入正文
         save_review(review_content, user_email)

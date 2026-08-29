@@ -12,6 +12,7 @@ from src.utils.file_utils import (
     _parse_draft_date
 )
 from src.services.memory_service import MemoryService
+from src.utils.user_utils import extract_usage_tokens, update_user_usage
 from openai import OpenAI
 
 
@@ -64,10 +65,11 @@ class ArchiveService:
             raise Exception(f"API request failed: {str(e)}")
         
         structured_data = json.loads(extraction_response.choices[0].message.content)
-        return structured_data
+        tokens = extract_usage_tokens(getattr(extraction_response, "usage", None))
+        return structured_data, tokens
     
-    def generate_diary_article(self, conversation: list, date_str: str = None) -> str:
-        """生成日记文章"""
+    def generate_diary_article(self, conversation: list, date_str: str = None) -> tuple:
+        """生成日记文章，返回 (日记文章, 本次消耗的token数)"""
         if not date_str:
             date_str = datetime.date.today().isoformat()
 
@@ -131,7 +133,8 @@ class ArchiveService:
             raise Exception(f"API request failed: {str(e)}")
 
         diary_article = article_response.choices[0].message.content
-        return diary_article
+        tokens = extract_usage_tokens(getattr(article_response, "usage", None))
+        return diary_article, tokens
     
     def archive(self, conversation: list, draft_date: date = None, delete_draft: bool = False,
                 user_email: str = None) -> Dict[str, Any]:
@@ -158,7 +161,11 @@ class ArchiveService:
         structured_data = {"events": [], "people": [], "emotions": [], "ideas": []}
         
         # 生成日记文章（必须等待完成，用于保存文件）
-        diary_article = self.generate_diary_article(conversation, date_str)
+        diary_article, article_tokens = self.generate_diary_article(conversation, date_str)
+        
+        # 归档产生的 LLM 消耗记账（手动/自动归档均走此路径；只计 tokens 不计对话轮次）
+        if user_email and article_tokens > 0:
+            update_user_usage(user_email, tokens_increment=article_tokens)
         
         filename = finalize_diary(structured_data, conversation, diary_article, 
                                   draft_date=draft_date, delete_draft=delete_draft,

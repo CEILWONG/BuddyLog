@@ -220,6 +220,11 @@ async def speech_to_text(audio: UploadFile = File(...), current_email: str = Dep
             }
         )
         text = completion.choices[0].message.content if completion.choices else ""
+        # 语音识别的 token 消耗记账（只计 tokens 不计对话轮次）
+        asr_usage = getattr(completion, "usage", None)
+        asr_tokens = int(getattr(asr_usage, "total_tokens", 0) or 0) if asr_usage else 0
+        if asr_tokens > 0:
+            update_user_usage(current_email, tokens_increment=asr_tokens)
         return {"text": text}
     except Exception as e:
         print(f"Speech-to-text error: {str(e)}")

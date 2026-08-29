@@ -11,6 +11,7 @@ from src.utils.file_utils import (
     extract_agent_persona,
     extract_profile_without_persona
 )
+from src.utils.user_utils import extract_usage_tokens, update_user_usage
 from openai import OpenAI
 
 
@@ -282,6 +283,10 @@ class ChatService:
                 extra_body=extra_body
             )
             reply = response.choices[0].message.content.strip()
+            # 开场白的 LLM 消耗记账（只计 tokens 不计对话轮次）
+            greeting_tokens = extract_usage_tokens(getattr(response, "usage", None))
+            if user_email and greeting_tokens > 0:
+                update_user_usage(user_email, tokens_increment=greeting_tokens)
             # 清洗可能的格式标记
             if reply.startswith('```'):
                 reply = reply.split('\n', 1)[-1] if '\n' in reply else reply[3:]

@@ -163,6 +163,21 @@ def update_user_settings(email: str, settings: Dict[str, Any]) -> bool:
     return True
 
 
+def extract_usage_tokens(usage) -> int:
+    """
+    从 OpenAI 兼容响应的 usage 对象中提取总 token 数（取 API 响应真实值）。
+
+    Args:
+        usage: completion.usage（可能为 None）
+
+    Returns:
+        total_tokens，无法获取时返回 0
+    """
+    if not usage:
+        return 0
+    return int(getattr(usage, "total_tokens", 0) or 0)
+
+
 def update_user_usage(email: str, conversations_increment: int = 0, tokens_increment: int = 0) -> bool:
     """
     更新用户使用统计

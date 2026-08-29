@@ -1,4 +1,5 @@
 from src.utils.file_utils import load_memory, update_memory_file
+from src.utils.user_utils import extract_usage_tokens, update_user_usage
 from openai import OpenAI
 
 
@@ -96,5 +97,9 @@ class MemoryService:
             # 写入新记忆
             update_memory_file(new_memory, user_email)
             print(f"Memory updated successfully for user: {user_email}")
+            # 记忆更新的 LLM 消耗记账（只计 tokens 不计对话轮次）
+            memory_tokens = extract_usage_tokens(getattr(memory_response, "usage", None))
+            if user_email and memory_tokens > 0:
+                update_user_usage(user_email, tokens_increment=memory_tokens)
         except Exception as e:
             print(f"Failed to update memory for user {user_email}: {str(e)}")
