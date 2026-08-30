@@ -193,6 +193,44 @@ def get_today_draft_file(user_email: Optional[str] = None):
     return draft_path if os.path.exists(draft_path) else None
 
 
+def scan_recent_user_activity(limit: int = 20):
+    """
+    扫描所有用户的 diaries 目录，取每个用户最近一次文件变动（mtime，含今日草稿）。
+    供管理后台“最近活跃”视图使用，不新增持久化数据。
+
+    Returns:
+        [{"user_id", "last_modified", "last_modified_ts", "last_file"}]，按变动时间倒序，最多 limit 条；
+        无日记文件的用户不包含在内。
+    """
+    from src.utils.user_utils import USERS_DIR
+    results = []
+    if not os.path.exists(USERS_DIR):
+        return results
+    for user_id in os.listdir(USERS_DIR):
+        diaries_dir = os.path.join(USERS_DIR, user_id, "diaries")
+        if not os.path.isdir(diaries_dir):
+            continue
+        latest_ts = None
+        latest_file = None
+        for fname in os.listdir(diaries_dir):
+            fpath = os.path.join(diaries_dir, fname)
+            if not os.path.isfile(fpath):
+                continue
+            ts = os.path.getmtime(fpath)
+            if latest_ts is None or ts > latest_ts:
+                latest_ts = ts
+                latest_file = fname
+        if latest_ts is not None:
+            results.append({
+                "user_id": user_id,
+                "last_modified": datetime.datetime.fromtimestamp(latest_ts).strftime("%Y-%m-%d %H:%M:%S"),
+                "last_modified_ts": latest_ts,
+                "last_file": latest_file,
+            })
+    results.sort(key=lambda x: x["last_modified_ts"], reverse=True)
+    return results[:limit]
+
+
 def append_to_draft(user_msg, assistant_reply, user_email: Optional[str] = None):
     """追加内容到今天的草稿文件"""
     diaries_dir = _get_diaries_dir(user_email)

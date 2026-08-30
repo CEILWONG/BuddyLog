@@ -1946,6 +1946,253 @@
                 justify-content: center;
             }
         }
+
+        /* ==================== 管理后台 ==================== */
+        #admin-app {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+        }
+
+        .admin-header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .admin-header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.85rem;
+        }
+
+        .admin-header-right .btn-logout {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.6);
+            padding: 6px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .admin-tab {
+            padding: 8px 18px;
+            border: 2px solid #ffeaa7;
+            background: #fff;
+            color: #636e72;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .admin-tab.active {
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .admin-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: #636e72;
+        }
+
+        .admin-table-wrap {
+            overflow-x: auto;
+            background: #fff;
+            border: 2px solid #ffeaa7;
+            border-radius: 16px;
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 760px;
+        }
+
+        .admin-table th {
+            background: #fff9ec;
+            padding: 10px 12px;
+            text-align: left;
+            color: #636e72;
+            white-space: nowrap;
+        }
+
+        .admin-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .admin-table th.sortable:hover {
+            color: #fd79a8;
+        }
+
+        .admin-table td {
+            padding: 10px 12px;
+            border-top: 1px solid #ffeaa7;
+            white-space: nowrap;
+        }
+
+        .admin-table tbody tr {
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .admin-table tbody tr:hover {
+            background: #fff5f8;
+        }
+
+        .admin-recent-item {
+            background: #fff;
+            border: 2px solid #ffeaa7;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            transition: all 0.15s;
+        }
+
+        .admin-recent-item:hover {
+            border-color: #fd79a8;
+            transform: translateY(-1px);
+        }
+
+        .admin-recent-item .recent-time {
+            color: #636e72;
+            font-size: 0.8rem;
+        }
+
+        .admin-section {
+            background: #fff;
+            border: 2px solid #ffeaa7;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .admin-section h4 {
+            margin: 0 0 14px 0;
+            color: #2d3436;
+        }
+
+        .admin-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 520px;
+        }
+
+        .admin-form-item label {
+            display: block;
+            font-size: 0.8rem;
+            color: #636e72;
+            margin-bottom: 4px;
+        }
+
+        .admin-form-item input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #ffeaa7;
+            border-radius: 10px;
+            outline: none;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+
+        .admin-form-item input:focus {
+            border-color: #fd79a8;
+        }
+
+        .admin-file-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: #fff9ec;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.15s;
+        }
+
+        .admin-file-btn:hover {
+            border-color: #fd79a8;
+        }
+
+        .admin-file-btn.selected {
+            border-color: #fd79a8;
+            background: #fff5f8;
+        }
+
+        .admin-file-content {
+            margin-top: 12px;
+            padding: 16px;
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            max-height: 480px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #2d3436;
+        }
+
+        .admin-empty {
+            text-align: center;
+            color: #b2bec3;
+            padding: 30px 0;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            #admin-app {
+                padding: 12px;
+            }
+
+            .admin-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+
+            .admin-tabs {
+                flex-wrap: wrap;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1961,7 +2208,7 @@
         <form class="auth-form" id="auth-form">
             <div class="form-group">
                 <label for="email">邮箱</label>
-                <input type="email" id="email" name="email" placeholder="your@email.com" required>
+                <input type="text" id="email" name="email" placeholder="your@email.com" required>
             </div>
             <div class="form-group">
                 <label for="password">密码</label>
@@ -2026,6 +2273,98 @@
                 <p id="setting-model-name" style="font-size: 0.95rem; color: #2d3436; font-weight: 600; margin: 4px 0;">加载中...</p>
                 <p class="hint">由系统管理员在环境变量中配置</p>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- 管理后台（仅管理员登录后可见） -->
+<div id="admin-app" style="display: none;">
+    <div class="admin-header">
+        <h1>◉ BuddyLog 管理控制台</h1>
+        <div class="admin-header-right">
+            <span id="admin-email"></span>
+            <button class="btn-logout" onclick="logout()">退出</button>
+        </div>
+    </div>
+
+    <div class="admin-tabs">
+        <button class="admin-tab active" id="admin-tab-users" onclick="showAdminView('users')">用户列表</button>
+        <button class="admin-tab" id="admin-tab-recent" onclick="showAdminView('recent')">最近活跃</button>
+        <button class="admin-tab" id="admin-tab-detail" style="display: none;" onclick="showAdminView('detail')">用户详情</button>
+    </div>
+
+    <!-- 视图一：用户列表 -->
+    <div class="admin-view" id="admin-view-users">
+        <div class="admin-toolbar">
+            <span id="admin-users-count">加载中</span>
+            <span>点击「总 Tokens」/「总对话」列头切换排序</span>
+        </div>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>邮箱</th>
+                        <th class="sortable" id="admin-th-tokens" onclick="toggleAdminSort('tokens')">总 Tokens ▼</th>
+                        <th class="sortable" id="admin-th-conversations" onclick="toggleAdminSort('conversations')">总对话</th>
+                        <th>今日对话</th>
+                        <th>生效限额</th>
+                        <th>模型</th>
+                        <th>注册时间</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-users-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 视图二：最近活跃 -->
+    <div class="admin-view" id="admin-view-recent" style="display: none;">
+        <div class="admin-toolbar">
+            <label>最近 <input type="number" id="admin-recent-limit" value="20" min="1" max="200" style="width: 70px; padding: 6px; border: 2px solid #ffeaa7; border-radius: 8px;"> 个有日记变动的用户</label>
+            <button class="btn-secondary" onclick="loadAdminRecent()">刷新</button>
+            <span>按日记文件修改时间排序（含今日草稿）</span>
+        </div>
+        <div id="admin-recent-list"></div>
+    </div>
+
+    <!-- 视图三：用户详情 -->
+    <div class="admin-view" id="admin-view-detail" style="display: none;">
+        <div class="admin-toolbar">
+            <button class="btn-secondary" onclick="adminBackFromDetail()">← 返回列表</button>
+            <span id="admin-detail-email" style="font-weight: 700; color: #2d3436;"></span>
+        </div>
+
+        <div class="admin-section">
+            <h4>⚙️ 用户设置（留空则使用系统默认）</h4>
+            <div class="admin-form">
+                <div class="admin-form-item">
+                    <label>每日对话限制（次/天）</label>
+                    <input type="number" id="admin-set-limit" min="0" placeholder="系统默认">
+                </div>
+                <div class="admin-form-item">
+                    <label>使用模型</label>
+                    <input type="text" id="admin-set-model" placeholder="系统默认" maxlength="100">
+                </div>
+                <div class="admin-form-item">
+                    <label>用户 API Key</label>
+                    <input type="text" id="admin-set-apikey" placeholder="系统默认" maxlength="200">
+                </div>
+                <div>
+                    <button class="btn-primary" style="padding: 10px 22px;" onclick="saveAdminSettings()">保存设置</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <h4>💬 今日草稿（原始对话）</h4>
+            <button class="btn-secondary" onclick="loadAdminTodayDraft()">查看今日草稿</button>
+            <div id="admin-detail-draft" class="admin-file-content" style="display: none;"></div>
+        </div>
+
+        <div class="admin-section">
+            <h4>📝 日记文件</h4>
+            <div id="admin-detail-files"><div class="admin-empty">加载中</div></div>
+            <div id="admin-detail-file-content" class="admin-file-content" style="display: none;"></div>
         </div>
     </div>
 </div>
@@ -2406,6 +2745,7 @@
         localStorage.removeItem('buddylog_email');
         document.getElementById('auth-container').style.display = 'flex';
         document.getElementById('user-info').style.display = 'none';
+        document.getElementById('admin-app').style.display = 'none';
         document.getElementById('email').value = '';
         document.getElementById('password').value = '';
     }
@@ -2489,6 +2829,15 @@
                 // 隐藏认证界面，显示主应用
                 document.getElementById('auth-container').style.display = 'none';
 
+                // 管理员账户：进入管理控制台，不加载普通用户界面
+                if (currentUser.is_admin) {
+                    enterAdminApp();
+                    return;
+                }
+
+                // 普通用户：恢复常规界面显示状态（可能上次是管理员登录）
+                resetAdminVisibility();
+
                 // 显示用户信息
                 document.getElementById('user-email').textContent = currentUser.email;
                 document.getElementById('user-info').style.display = 'block';
@@ -2509,6 +2858,246 @@
             console.error('初始化失败:', e);
             logout();
         }
+    }
+
+    // ==================== 管理控制台 ====================
+    let adminSort = { by: 'tokens', order: 'desc' };
+    let adminDetailEmail = '';
+    let adminDetailBackTo = 'users';
+
+    function enterAdminApp() {
+        // 隐藏普通用户界面（桌面端 + 移动端），显示管理控制台
+        ['sidebar', 'main', 'mobile-header', 'mobile-main'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        document.getElementById('admin-app').style.display = 'block';
+        document.getElementById('admin-email').textContent = currentUser.email;
+        showAdminView('users');
+    }
+
+    function resetAdminVisibility() {
+        // 普通用户登录时恢复界面显示状态，交回 CSS 媒体查询接管
+        document.getElementById('admin-app').style.display = 'none';
+        ['sidebar', 'main', 'mobile-header', 'mobile-main'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = '';
+        });
+    }
+
+    function showAdminView(name) {
+        ['users', 'recent', 'detail'].forEach(v => {
+            document.getElementById('admin-view-' + v).style.display = (v === name) ? '' : 'none';
+            document.getElementById('admin-tab-' + v).classList.toggle('active', v === name);
+        });
+        if (name === 'users') loadAdminUsers();
+        if (name === 'recent') loadAdminRecent();
+    }
+
+    async function loadAdminUsers() {
+        const tbody = document.getElementById('admin-users-tbody');
+        tbody.innerHTML = '<tr><td colspan="7" class="admin-empty">加载中</td></tr>';
+        try {
+            const resp = await fetch(`/admin/users?sort_by=${adminSort.by}&order=${adminSort.order}`, {
+                headers: getAuthHeaders()
+            });
+            if (!resp.ok) throw new Error('加载失败');
+            const data = await resp.json();
+            document.getElementById('admin-users-count').textContent = `共 ${data.total} 个用户`;
+            // 更新排序箭头指示（中立文案，无省略号）
+            const arrow = adminSort.order === 'desc' ? ' ▼' : ' ▲';
+            document.getElementById('admin-th-tokens').textContent = '总 Tokens' + (adminSort.by === 'tokens' ? arrow : '');
+            document.getElementById('admin-th-conversations').textContent = '总对话' + (adminSort.by === 'conversations' ? arrow : '');
+            if (!data.users.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="admin-empty">暂无用户</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            data.users.forEach(u => {
+                const tr = document.createElement('tr');
+                const created = (u.created_at || '').slice(0, 10);
+                tr.innerHTML = `
+                    <td>${escapeHtml(u.email)}</td>
+                    <td>${u.total_tokens}</td>
+                    <td>${u.total_conversations}</td>
+                    <td>${u.today_conversations}</td>
+                    <td>${u.effective_daily_limit} 次/天</td>
+                    <td>${escapeHtml(u.selected_model || '系统默认')}</td>
+                    <td>${escapeHtml(created)}</td>`;
+                tr.onclick = () => openAdminDetail(u.email, 'users');
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="7" class="admin-empty">加载失败，请重试</td></tr>';
+        }
+    }
+
+    function toggleAdminSort(field) {
+        if (adminSort.by === field) {
+            adminSort.order = adminSort.order === 'desc' ? 'asc' : 'desc';
+        } else {
+            adminSort.by = field;
+            adminSort.order = 'desc';
+        }
+        loadAdminUsers();
+    }
+
+    async function loadAdminRecent() {
+        const list = document.getElementById('admin-recent-list');
+        list.innerHTML = '<div class="admin-empty">加载中</div>';
+        const limit = document.getElementById('admin-recent-limit').value || 20;
+        try {
+            const resp = await fetch(`/admin/recent?limit=${limit}`, {
+                headers: getAuthHeaders()
+            });
+            if (!resp.ok) throw new Error('加载失败');
+            const data = await resp.json();
+            if (!data.recent.length) {
+                list.innerHTML = '<div class="admin-empty">暂无日记变动记录</div>';
+                return;
+            }
+            list.innerHTML = '';
+            data.recent.forEach(r => {
+                const item = document.createElement('div');
+                item.className = 'admin-recent-item';
+                item.innerHTML = `
+                    <div>
+                        <div style="font-weight: 700;">${escapeHtml(r.email)}</div>
+                        <div class="recent-time">最近变动：${escapeHtml(r.last_file)}</div>
+                    </div>
+                    <div class="recent-time">${escapeHtml(r.last_modified)}</div>`;
+                item.onclick = () => openAdminDetail(r.email, 'recent');
+                list.appendChild(item);
+            });
+        } catch (e) {
+            list.innerHTML = '<div class="admin-empty">加载失败，请重试</div>';
+        }
+    }
+
+    async function openAdminDetail(email, from) {
+        adminDetailEmail = email;
+        adminDetailBackTo = from;
+        document.getElementById('admin-tab-detail').style.display = '';
+        showAdminView('detail');
+        document.getElementById('admin-detail-email').textContent = email;
+        // 清空上一次的内容状态
+        document.getElementById('admin-detail-draft').style.display = 'none';
+        document.getElementById('admin-detail-file-content').style.display = 'none';
+
+        // 填充设置表单（从全量用户列表取该用户的设置）
+        try {
+            const resp = await fetch('/admin/users?sort_by=tokens&order=desc', {
+                headers: getAuthHeaders()
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                const u = data.users.find(x => x.email === email);
+                if (u) {
+                    document.getElementById('admin-set-limit').value = u.daily_max_conversations ?? '';
+                    document.getElementById('admin-set-model').value = u.selected_model || '';
+                    document.getElementById('admin-set-apikey').value = u.api_key || '';
+                }
+            }
+        } catch (e) {
+            console.error('加载用户设置失败:', e);
+        }
+
+        // 日记文件列表（按修改时间倒序）
+        const filesBox = document.getElementById('admin-detail-files');
+        filesBox.innerHTML = '<div class="admin-empty">加载中</div>';
+        try {
+            const resp = await fetch(`/admin/users/${encodeURIComponent(email)}/diaries`, {
+                headers: getAuthHeaders()
+            });
+            if (!resp.ok) throw new Error('加载失败');
+            const data = await resp.json();
+            if (!data.files.length) {
+                filesBox.innerHTML = '<div class="admin-empty">暂无日记文件</div>';
+                return;
+            }
+            filesBox.innerHTML = '';
+            data.files.forEach(f => {
+                const btn = document.createElement('button');
+                btn.className = 'admin-file-btn';
+                btn.innerHTML = `${f.is_draft ? '📝' : '📄'} ${escapeHtml(f.filename)} <span style="float: right; color: #b2bec3; font-size: 0.75rem;">${escapeHtml(f.modified)}</span>`;
+                btn.onclick = () => loadAdminFile(email, f.filename, btn);
+                filesBox.appendChild(btn);
+            });
+        } catch (e) {
+            filesBox.innerHTML = '<div class="admin-empty">加载失败，请重试</div>';
+        }
+    }
+
+    async function loadAdminFile(email, filename, btnEl) {
+        document.querySelectorAll('.admin-file-btn').forEach(b => b.classList.remove('selected'));
+        if (btnEl) btnEl.classList.add('selected');
+        const box = document.getElementById('admin-detail-file-content');
+        box.style.display = 'block';
+        box.textContent = '加载中';
+        try {
+            const resp = await fetch(`/admin/users/${encodeURIComponent(email)}/file/${encodeURIComponent(filename)}`, {
+                headers: getAuthHeaders()
+            });
+            if (!resp.ok) throw new Error('加载失败');
+            const data = await resp.json();
+            box.textContent = data.content || '(空文件)';
+        } catch (e) {
+            box.textContent = '加载失败，请重试';
+        }
+    }
+
+    async function loadAdminTodayDraft() {
+        const box = document.getElementById('admin-detail-draft');
+        box.style.display = 'block';
+        box.textContent = '加载中';
+        try {
+            const resp = await fetch(`/admin/users/${encodeURIComponent(adminDetailEmail)}/today-draft`, {
+                headers: getAuthHeaders()
+            });
+            if (!resp.ok) throw new Error('加载失败');
+            const data = await resp.json();
+            box.textContent = data.content || '今日暂无对话记录';
+        } catch (e) {
+            box.textContent = '加载失败，请重试';
+        }
+    }
+
+    async function saveAdminSettings() {
+        const limitVal = document.getElementById('admin-set-limit').value.trim();
+        const modelVal = document.getElementById('admin-set-model').value.trim();
+        const apikeyVal = document.getElementById('admin-set-apikey').value.trim();
+        let dailyLimit = null;
+        if (limitVal !== '') {
+            dailyLimit = parseInt(limitVal, 10);
+            if (isNaN(dailyLimit) || dailyLimit < 0) {
+                alert('请输入有效的每日限额（不小于 0 的整数）');
+                return;
+            }
+        }
+        const body = {
+            daily_max_conversations: dailyLimit,
+            selected_model: modelVal === '' ? null : modelVal,
+            api_key: apikeyVal === '' ? null : apikeyVal
+        };
+        try {
+            const resp = await fetch(`/admin/users/${encodeURIComponent(adminDetailEmail)}/settings`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(body)
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.detail || '保存失败');
+            }
+            alert('设置已保存');
+        } catch (e) {
+            alert('保存失败：' + e.message);
+        }
+    }
+
+    function adminBackFromDetail() {
+        document.getElementById('admin-tab-detail').style.display = 'none';
+        showAdminView(adminDetailBackTo === 'recent' ? 'recent' : 'users');
     }
     
     // 打开设置弹窗
@@ -2925,8 +3514,8 @@
         const _statEl = document.getElementById('review-btn-stat');
         const _d = canInfo.days_since == null ? 0 : canInfo.days_since;
         const _c = canInfo.conversations_delta == null ? 0 : canInfo.conversations_delta;
-        const _reqD = canInfo.required_days == null ? 1 : canInfo.required_days;
-        const _reqC = canInfo.required_delta == null ? 5 : canInfo.required_delta;
+        const _reqD = canInfo.required_days == null ? 2 : canInfo.required_days;
+        const _reqC = canInfo.required_delta == null ? 20 : canInfo.required_delta;
         if (_statEl) {
             if (!meta.generated_date) {
                 _statEl.textContent = '';
@@ -2937,10 +3526,11 @@
                 const _missDay = _d < _reqD;
                 const _missConv = _c < _reqC;
                 const _needConv = Math.max(_reqC - _c, 0);
+                const _needDay = Math.max(_reqD - _d, 0);
                 if (_missDay && _missConv) {
-                    _statEl.textContent = '需明日 · 还差 ' + _needConv + ' 轮对话';
+                    _statEl.textContent = '还差 ' + _needDay + ' 天 · 还差 ' + _needConv + ' 轮对话';
                 } else if (_missDay) {
-                    _statEl.textContent = '需明日再来';
+                    _statEl.textContent = '还差 ' + _needDay + ' 天';
                 } else if (_missConv) {
                     _statEl.textContent = '还差 ' + _needConv + ' 轮对话';
                 } else {

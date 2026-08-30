@@ -328,6 +328,28 @@ def get_user_settings(email: str) -> Dict[str, Any]:
     return user_info.get("settings", {})
 
 
+def get_all_users() -> Dict[str, Any]:
+    """获取全部用户（邮箱 -> 用户信息），仅供管理后台使用"""
+    return _load_user_index()
+
+
+def admin_update_user_settings(email: str, settings_patch: Dict[str, Any]) -> bool:
+    """
+    管理员更新用户设置：传入字段直接覆盖，空值（None/空字符串）清空为 None。
+
+    与 update_user_settings 不同，这里不跳过 None，支持把字段重置为默认。
+    """
+    index = _load_user_index()
+    if email not in index:
+        return False
+    current_settings = index[email].get("settings", {})
+    for key, value in settings_patch.items():
+        current_settings[key] = None if (value is None or value == "") else value
+    index[email]["settings"] = current_settings
+    _save_user_index(index)
+    return True
+
+
 def get_user_review_meta(email: str) -> Dict[str, Any]:
     """
     获取用户复盘元数据（内嵌在 user_index.json 的 review 字段）。

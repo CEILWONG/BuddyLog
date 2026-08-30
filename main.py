@@ -32,18 +32,25 @@ MAX_REGISTERS_PER_IP_PER_DAY = 50  # 每个 IP 每天最多注册次数
 from src.models.schemas import Message, ArchiveRequest
 from src.models.auth_schemas import (
     UserRegister, UserLogin, TokenResponse, UserProfileResponse,
-    SettingsUpdateRequest
+    SettingsUpdateRequest, AdminSettingsUpdateRequest
 )
 from src.services.chat_service import ChatService
 from src.services.archive_service import ArchiveService
-from src.services.auth_service import verify_password
+from src.services.auth_service import verify_password, get_password_hash
 from src.services.review_service import ReviewService
-from src.utils.file_utils import ensure_data_dir, list_diary_files, get_diary_file_path
-from src.utils.auth_utils import create_access_token, get_current_user
+from src.utils.file_utils import (
+    ensure_data_dir, list_diary_files, get_diary_file_path,
+    scan_recent_user_activity, get_today_draft_file,
+)
+from src.utils.auth_utils import (
+    create_access_token, get_current_user, get_current_admin,
+    ADMIN_EMAIL, ADMIN_PASSWORD, ROLE_ADMIN, ROLE_USER,
+)
 from src.utils.user_utils import (
     create_user, get_user_by_email, update_user_settings,
     update_user_usage, check_user_limit, get_user_settings,
-    get_effective_daily_limit,
+    get_effective_daily_limit, get_all_users, admin_update_user_settings,
+    get_user_diaries_dir, DEFAULT_DAILY_MAX_CONVERSATIONS,
 )
 
 # 确保数据目录存在
@@ -81,6 +88,10 @@ async def register(user_data: UserRegister, request: Request):
     if register_count >= MAX_REGISTERS_PER_IP_PER_DAY:
         raise HTTPException(status_code=429, detail=f"每个 IP 每天最多只能注册 {MAX_REGISTERS_PER_IP_PER_DAY} 个账号")
     
+    # 内置管理员邮箱不允许注册占用
+    if user_data.email.lower() == ADMIN_EMAIL.lower():
+        raise HTTPException(status_code=400, detail="该邮箱不可用")
+    
     # 检查邮箱是否已存在
     existing_user = get_user_by_email(user_data.email)
     if existing_user:
@@ -97,7 +108,7 @@ async def register(user_data: UserRegister, request: Request):
     ip_register_cache[client_ip][today] = register_count + 1
     
     # 生成Token
-    access_token = create_access_token(data={"sub": user_data.email})
+    access_token = create_access_token(data={"sub": user_data.email, "role": ROLE_USER})
     
     return {
         "access_token": access_token,
@@ -110,6 +121,18 @@ async def register(user_data: UserRegister, request: Request):
 @app.post("/auth/login", response_model=TokenResponse)
 async def login(user_data: UserLogin):
     """用户登录"""
+    # 内置管理员账户：优先匹配，不查用户索引
+    if user_data.email.lower() == ADMIN_EMAIL.lower():
+        if get_password_hash(user_data.password) != get_password_hash(ADMIN_PASSWORD):
+            raise HTTPException(status_code=401, detail="邮箱或密码错误")
+        access_token = create_access_token(data={"sub": ADMIN_EMAIL, "role": ROLE_ADMIN})
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_id": "admin",
+            "email": ADMIN_EMAIL
+        }
+    
     # 获取用户信息
     user_info = get_user_by_email(user_data.email)
     if not user_info:
@@ -120,7 +143,7 @@ async def login(user_data: UserLogin):
         raise HTTPException(status_code=401, detail="邮箱或密码错误")
     
     # 生成Token
-    access_token = create_access_token(data={"sub": user_data.email})
+    access_token = create_access_token(data={"sub": user_data.email, "role": ROLE_USER})
     
     return {
         "access_token": access_token,
@@ -133,6 +156,25 @@ async def login(user_data: UserLogin):
 @app.get("/auth/me", response_model=UserProfileResponse)
 async def get_me(current_email: str = Depends(get_current_user)):
     """获取当前用户信息"""
+    # 管理员不走用户索引，返回基础信息 + is_admin 标记
+    if current_email == ADMIN_EMAIL:
+        return {
+            "email": current_email,
+            "user_id": "admin",
+            "created_at": datetime.now().isoformat(),
+            "settings": {},
+            "usage": {
+                "total_conversations": 0,
+                "total_tokens": 0,
+                "today_conversations": 0,
+                "today_tokens": 0,
+                "last_reset_date": date.today().isoformat()
+            },
+            "effective_daily_limit": 0,
+            "model_name": MODEL,
+            "is_admin": True
+        }
+    
     user_info = get_user_by_email(current_email)
     if not user_info:
         raise HTTPException(status_code=404, detail="用户不存在")
@@ -147,7 +189,8 @@ async def get_me(current_email: str = Depends(get_current_user)):
         "settings": user_info.get("settings", {}),
         "usage": user_info.get("usage", {}),
         "effective_daily_limit": effective_limit,
-        "model_name": MODEL
+        "model_name": MODEL,
+        "is_admin": False
     }
 
 
@@ -172,6 +215,127 @@ async def update_settings(
         raise HTTPException(status_code=500, detail="更新设置失败")
     
     return {"message": "设置已更新"}
+
+
+# ==================== 管理后台接口（仅管理员） ====================
+
+def _require_user_exists(email: str):
+    """管理接口通用：目标用户不存在则 404"""
+    if get_user_by_email(email) is None:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+
+@app.get("/admin/users")
+async def admin_list_users(sort_by: str = "tokens", order: str = "desc", _: str = Depends(get_current_admin)):
+    """获取全量用户列表，可按 token 用量 / 对话总量排序"""
+    all_users = get_all_users()
+    today = datetime.now().strftime("%Y-%m-%d")
+    env_limit = os.getenv("DAILY_MAX_CONVERSATIONS")
+    result = []
+    for email, info in all_users.items():
+        usage = info.get("usage", {}) or {}
+        settings = info.get("settings", {}) or {}
+        # 跨天未聊天的用户今日统计尚未重置，这里按日期判断归零，与限流逻辑一致
+        is_today = usage.get("last_reset_date") == today
+        # 实际生效限额：用户设置 > 环境变量 > 默认值（与 get_effective_daily_limit 逻辑一致，内联避免重复读盘）
+        user_limit = settings.get("daily_max_conversations")
+        if user_limit is not None:
+            effective_limit = int(user_limit)
+        elif env_limit is not None:
+            effective_limit = int(env_limit)
+        else:
+            effective_limit = DEFAULT_DAILY_MAX_CONVERSATIONS
+        result.append({
+            "email": email,
+            "user_id": info.get("user_id", ""),
+            "created_at": info.get("created_at", ""),
+            "total_tokens": usage.get("total_tokens", 0),
+            "total_conversations": usage.get("total_conversations", 0),
+            "today_conversations": usage.get("today_conversations", 0) if is_today else 0,
+            "today_tokens": usage.get("today_tokens", 0) if is_today else 0,
+            "daily_max_conversations": user_limit,
+            "effective_daily_limit": effective_limit,
+            "selected_model": settings.get("selected_model"),
+            "api_key": settings.get("api_key"),
+        })
+    sort_field = "total_conversations" if sort_by == "conversations" else "total_tokens"
+    result.sort(key=lambda u: u[sort_field], reverse=(order != "asc"))
+    return {"users": result, "total": len(result)}
+
+
+@app.get("/admin/recent")
+async def admin_recent_activity(limit: int = 20, _: str = Depends(get_current_admin)):
+    """最近活跃用户（按日记文件修改时间，含今日草稿）"""
+    limit = max(1, min(limit, 200))
+    recents = scan_recent_user_activity(limit)
+    id_to_email = {info.get("user_id"): email for email, info in get_all_users().items()}
+    items = []
+    for r in recents:
+        email = id_to_email.get(r["user_id"])
+        if not email:
+            continue
+        items.append({
+            "email": email,
+            "user_id": r["user_id"],
+            "last_modified": r["last_modified"],
+            "last_file": r["last_file"],
+        })
+    return {"recent": items}
+
+
+@app.get("/admin/users/{email}/diaries")
+async def admin_user_diaries(email: str, _: str = Depends(get_current_admin)):
+    """指定用户的日记文件列表（按修改时间倒序）"""
+    _require_user_exists(email)
+    diaries_dir = get_user_diaries_dir(email)
+    files = []
+    if diaries_dir and os.path.exists(diaries_dir):
+        for fname in os.listdir(diaries_dir):
+            fpath = os.path.join(diaries_dir, fname)
+            if os.path.isfile(fpath) and fname.endswith(".md"):
+                files.append({
+                    "filename": fname,
+                    "modified": datetime.fromtimestamp(os.path.getmtime(fpath)).strftime("%Y-%m-%d %H:%M:%S"),
+                    "is_draft": "_draft" in fname,
+                })
+    files.sort(key=lambda x: x["modified"], reverse=True)
+    return {"email": email, "files": files, "has_today_draft": get_today_draft_file(email) is not None}
+
+
+@app.get("/admin/users/{email}/file/{filename}")
+async def admin_user_file(email: str, filename: str, _: str = Depends(get_current_admin)):
+    """读取指定用户的日记文件内容"""
+    _require_user_exists(email)
+    # 防路径穿越：拒绝路径分隔符与上级目录
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="非法文件名")
+    filepath = get_diary_file_path(filename, email)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="文件不存在")
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read()
+    return {"filename": filename, "content": content}
+
+
+@app.get("/admin/users/{email}/today-draft")
+async def admin_user_today_draft(email: str, _: str = Depends(get_current_admin)):
+    """读取指定用户的今日草稿（原始对话）"""
+    _require_user_exists(email)
+    draft_path = get_today_draft_file(email)
+    if not draft_path:
+        return {"content": ""}
+    with open(draft_path, "r", encoding="utf-8") as f:
+        return {"content": f.read()}
+
+
+@app.put("/admin/users/{email}/settings")
+async def admin_update_settings(email: str, patch: AdminSettingsUpdateRequest, _: str = Depends(get_current_admin)):
+    """修改指定用户的设置（每日限额 / 模型 / api_key，null 清空回默认）"""
+    _require_user_exists(email)
+    payload = patch.model_dump(exclude_unset=True)
+    if not admin_update_user_settings(email, payload):
+        raise HTTPException(status_code=500, detail="更新设置失败")
+    return {"message": "设置已保存"}
 
 
 # ==================== 原有接口（增加用户认证） ====================

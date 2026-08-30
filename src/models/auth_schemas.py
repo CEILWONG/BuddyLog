@@ -10,8 +10,8 @@ class UserRegister(BaseModel):
 
 
 class UserLogin(BaseModel):
-    """用户登录请求"""
-    email: EmailStr
+    """用户登录请求（放宽为字符串，兼容内置管理员账号等非邮箱标识）"""
+    email: str = Field(..., min_length=1, max_length=255)
     password: str
 
 
@@ -58,6 +58,7 @@ class UserProfileResponse(BaseModel):
     usage: UserUsage
     effective_daily_limit: int = 20  # 实际生效的每日对话限制
     model_name: str = ""  # 系统当前使用的大模型名称
+    is_admin: bool = False  # 是否管理员账户
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -66,3 +67,10 @@ class SettingsUpdateRequest(BaseModel):
     selected_model: Optional[str] = None
     api_key: Optional[str] = None
     profile_file: Optional[str] = None
+
+
+class AdminSettingsUpdateRequest(BaseModel):
+    """管理员更新用户设置请求：传入字段直接覆盖，null 表示清空回默认"""
+    daily_max_conversations: Optional[int] = None
+    selected_model: Optional[str] = None
+    api_key: Optional[str] = None
