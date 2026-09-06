@@ -19,8 +19,10 @@ class UserSettings(BaseModel):
     """用户设置"""
     daily_max_conversations: Optional[int] = None  # 每天最大对话次数，null表示无限制
     selected_model: Optional[str] = None  # 选用的模型，null使用系统默认
-    api_key: Optional[str] = None  # 用户自己的API Key，null使用系统默认
+    api_key: Optional[str] = None  # 用户自己的API Key；接口响应中始终为 null，明文不外发
     profile_file: Optional[str] = None  # 自定义profile文件路径，null使用系统默认
+    has_api_key: bool = False  # 是否已配置自己的 API Key（供前端判断能否清除）
+    api_key_masked: Optional[str] = None  # 脱敏后的 Key，仅用于前端展示
 
 
 class UserUsage(BaseModel):
@@ -62,7 +64,7 @@ class UserProfileResponse(BaseModel):
 
 
 class SettingsUpdateRequest(BaseModel):
-    """更新设置请求"""
+    """更新设置请求（用户自助）：未提交的字段保持原值，显式传 null/空字符串表示清空"""
     daily_max_conversations: Optional[int] = None
     selected_model: Optional[str] = None
     api_key: Optional[str] = None

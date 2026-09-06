@@ -663,6 +663,47 @@
             color: #2d3436;
         }
         
+        /* 移动端设置项内的可编辑控件（模型下拉 / API Key 输入） */
+        .mobile-setting-item input,
+        .mobile-setting-item select {
+            width: 100%;
+            margin-top: 6px;
+            padding: 10px 12px;
+            border: 2px solid #ffeaa7;
+            border-radius: 10px;
+            outline: none;
+            font-size: 0.9rem;
+            color: #2d3436;
+            background: #fff;
+            box-sizing: border-box;
+        }
+        
+        .mobile-setting-item input:focus,
+        .mobile-setting-item select:focus {
+            border-color: #fd79a8;
+        }
+        
+        .mobile-llm-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .mobile-llm-actions button {
+            flex: 1;
+            padding: 11px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .mobile-llm-actions button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
         .mobile-logout-btn {
             width: 100%;
             padding: 12px;
@@ -2031,7 +2072,7 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 0.85rem;
-            min-width: 760px;
+            min-width: 640px;
         }
 
         .admin-table th {
@@ -2171,6 +2212,42 @@
             color: #2d3436;
         }
 
+        /* 日记文件区：列表与内容分栏，避免长列表把内容顶到页面底部 */
+        .admin-files-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .admin-file-list {
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .admin-files-layout .admin-file-content {
+            min-width: 0;
+        }
+
+        @media (min-width: 1000px) {
+            .admin-files-layout {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+
+            .admin-file-list {
+                width: 320px;
+                flex-shrink: 0;
+                max-height: 62vh;
+            }
+
+            .admin-files-layout .admin-file-content {
+                flex: 1;
+                margin-top: 0;
+                max-height: 62vh;
+            }
+        }
+
         .admin-empty {
             text-align: center;
             color: #b2bec3;
@@ -2252,12 +2329,13 @@
             </div>
             <div class="settings-item">
                 <label for="setting-model">选择模型</label>
-                <select id="setting-model" disabled>
+                <select id="setting-model">
                     <option value="">系统默认</option>
                     <option value="qwen-plus">qwen-plus</option>
                     <option value="qwen-turbo">qwen-turbo</option>
                     <option value="qwen-max">qwen-max</option>
                 </select>
+                <p class="hint">需与下方 API Key 所属服务匹配，保存时会做一次可用性校验</p>
             </div>
         </div>
         
@@ -2265,13 +2343,17 @@
             <h4>🔑 高级设置</h4>
             <div class="settings-item">
                 <label for="setting-apikey">自定义 API Key</label>
-                <input type="password" id="setting-apikey" placeholder="使用系统默认" disabled>
-                <p class="hint">如需使用自己的 API Key，请在此输入</p>
+                <input type="password" id="setting-apikey" placeholder="留空则不修改" maxlength="200" autocomplete="off">
+                <p class="hint">填入自己的 Key 后，对话、归档与复盘将消耗你自己的额度；留空使用系统默认</p>
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button type="button" class="btn-primary" id="save-llm-btn" style="padding: 9px 20px;" onclick="saveLlmSettings()">保存设置</button>
+                    <button type="button" class="btn-cancel" id="clear-apikey-btn" style="padding: 9px 20px; display: none;" onclick="clearApiKey()">清除 Key</button>
+                </div>
             </div>
             <div class="settings-item">
-                <label>使用大模型</label>
+                <label>当前生效模型</label>
                 <p id="setting-model-name" style="font-size: 0.95rem; color: #2d3436; font-weight: 600; margin: 4px 0;">加载中...</p>
-                <p class="hint">由系统管理员在环境变量中配置</p>
+                <p class="hint">未自选模型时使用系统管理员配置的默认模型</p>
             </div>
         </div>
     </div>
@@ -2297,16 +2379,15 @@
     <div class="admin-view" id="admin-view-users">
         <div class="admin-toolbar">
             <span id="admin-users-count">加载中</span>
-            <span>点击「总 Tokens」/「总对话」列头切换排序</span>
+            <span>点击「总对话」/「今日对话」列头切换排序</span>
         </div>
         <div class="admin-table-wrap">
             <table class="admin-table">
                 <thead>
                     <tr>
                         <th>邮箱</th>
-                        <th class="sortable" id="admin-th-tokens" onclick="toggleAdminSort('tokens')">总 Tokens ▼</th>
-                        <th class="sortable" id="admin-th-conversations" onclick="toggleAdminSort('conversations')">总对话</th>
-                        <th>今日对话</th>
+                        <th class="sortable" id="admin-th-conversations" onclick="toggleAdminSort('conversations')">总对话 ▼</th>
+                        <th class="sortable" id="admin-th-today" onclick="toggleAdminSort('today')">今日对话</th>
                         <th>生效限额</th>
                         <th>模型</th>
                         <th>注册时间</th>
@@ -2347,10 +2428,12 @@
                 </div>
                 <div class="admin-form-item">
                     <label>用户 API Key</label>
-                    <input type="text" id="admin-set-apikey" placeholder="系统默认" maxlength="200">
+                    <input type="text" id="admin-set-apikey" placeholder="系统默认" maxlength="200" autocomplete="off">
+                    <p style="margin: 4px 0 0 0; font-size: 0.75rem; color: #636e72;">出于安全不回传明文：留空表示不修改，保存时会用该 Key 做一次可用性校验</p>
                 </div>
-                <div>
-                    <button class="btn-primary" style="padding: 10px 22px;" onclick="saveAdminSettings()">保存设置</button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="btn-primary" id="admin-save-settings-btn" style="padding: 10px 22px;" onclick="saveAdminSettings()">保存设置</button>
+                    <button class="btn-cancel" id="admin-clear-apikey-btn" style="padding: 10px 22px; display: none;" onclick="clearAdminApiKey()">清除该用户 Key</button>
                 </div>
             </div>
         </div>
@@ -2363,8 +2446,10 @@
 
         <div class="admin-section">
             <h4>📝 日记文件</h4>
-            <div id="admin-detail-files"><div class="admin-empty">加载中</div></div>
-            <div id="admin-detail-file-content" class="admin-file-content" style="display: none;"></div>
+            <div class="admin-files-layout">
+                <div id="admin-detail-files" class="admin-file-list"><div class="admin-empty">加载中</div></div>
+                <div id="admin-detail-file-content" class="admin-file-content" style="display: none;"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -2505,7 +2590,12 @@
                 </div>
                 <div class="mobile-setting-item">
                     <label>选择模型</label>
-                    <p id="mobile-setting-model">系统默认</p>
+                    <select id="mobile-setting-model">
+                        <option value="">系统默认</option>
+                        <option value="qwen-plus">qwen-plus</option>
+                        <option value="qwen-turbo">qwen-turbo</option>
+                        <option value="qwen-max">qwen-max</option>
+                    </select>
                 </div>
             </div>
             
@@ -2514,10 +2604,15 @@
                 <div class="mobile-setting-item">
                     <label>API Key</label>
                     <p id="mobile-setting-apikey">使用系统默认</p>
+                    <input type="password" id="mobile-setting-apikey-input" placeholder="留空则不修改" maxlength="200" autocomplete="off">
                 </div>
                 <div class="mobile-setting-item">
-                    <label>使用大模型</label>
+                    <label>当前生效模型</label>
                     <p id="mobile-setting-model-name">加载中...</p>
+                </div>
+                <div class="mobile-llm-actions">
+                    <button type="button" class="btn-primary" id="mobile-save-llm-btn" onclick="saveLlmSettings()">保存设置</button>
+                    <button type="button" class="btn-cancel" id="mobile-clear-apikey-btn" style="display: none;" onclick="clearApiKey()">清除 Key</button>
                 </div>
             </div>
             
@@ -2638,13 +2733,8 @@
         const effectiveLimit = currentUser.effective_daily_limit;
         document.getElementById('mobile-setting-daily-limit').textContent = effectiveLimit + ' 次/天';
         
-        const model = currentUser.settings?.selected_model;
-        document.getElementById('mobile-setting-model').textContent = model || '系统默认';
-        
-        // 填充高级设置
-        const apiKey = currentUser.settings?.api_key;
-        document.getElementById('mobile-setting-apikey').textContent = apiKey ? '已设置' : '使用系统默认';
-        
+        // 模型与 API Key（移动端同样支持自助修改，Key 只展示脱敏值）
+        fillLlmSettings();
         document.getElementById('mobile-setting-model-name').textContent = currentUser.model_name || '系统默认';
         
         mobileUserModal.classList.add('active');
@@ -2861,13 +2951,16 @@
     }
 
     // ==================== 管理控制台 ====================
-    let adminSort = { by: 'tokens', order: 'desc' };
+    let adminSort = { by: 'conversations', order: 'desc' };
     let adminDetailEmail = '';
     let adminDetailBackTo = 'users';
 
+    // 进入管理控制台时需要隐藏的普通用户界面（含移动端底部导航栏）
+    const USER_UI_IDS = ['sidebar', 'main', 'mobile-header', 'mobile-main', 'mobile-nav'];
+
     function enterAdminApp() {
         // 隐藏普通用户界面（桌面端 + 移动端），显示管理控制台
-        ['sidebar', 'main', 'mobile-header', 'mobile-main'].forEach(id => {
+        USER_UI_IDS.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
@@ -2879,7 +2972,7 @@
     function resetAdminVisibility() {
         // 普通用户登录时恢复界面显示状态，交回 CSS 媒体查询接管
         document.getElementById('admin-app').style.display = 'none';
-        ['sidebar', 'main', 'mobile-header', 'mobile-main'].forEach(id => {
+        USER_UI_IDS.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = '';
         });
@@ -2890,13 +2983,15 @@
             document.getElementById('admin-view-' + v).style.display = (v === name) ? '' : 'none';
             document.getElementById('admin-tab-' + v).classList.toggle('active', v === name);
         });
+        // 切视图时回到顶部，避免沿用上一个长列表的滚动位置
+        window.scrollTo({ top: 0, behavior: 'auto' });
         if (name === 'users') loadAdminUsers();
         if (name === 'recent') loadAdminRecent();
     }
 
     async function loadAdminUsers() {
         const tbody = document.getElementById('admin-users-tbody');
-        tbody.innerHTML = '<tr><td colspan="7" class="admin-empty">加载中</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="admin-empty">加载中</td></tr>';
         try {
             const resp = await fetch(`/admin/users?sort_by=${adminSort.by}&order=${adminSort.order}`, {
                 headers: getAuthHeaders()
@@ -2906,10 +3001,10 @@
             document.getElementById('admin-users-count').textContent = `共 ${data.total} 个用户`;
             // 更新排序箭头指示（中立文案，无省略号）
             const arrow = adminSort.order === 'desc' ? ' ▼' : ' ▲';
-            document.getElementById('admin-th-tokens').textContent = '总 Tokens' + (adminSort.by === 'tokens' ? arrow : '');
             document.getElementById('admin-th-conversations').textContent = '总对话' + (adminSort.by === 'conversations' ? arrow : '');
+            document.getElementById('admin-th-today').textContent = '今日对话' + (adminSort.by === 'today' ? arrow : '');
             if (!data.users.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="admin-empty">暂无用户</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="admin-empty">暂无用户</td></tr>';
                 return;
             }
             tbody.innerHTML = '';
@@ -2918,7 +3013,6 @@
                 const created = (u.created_at || '').slice(0, 10);
                 tr.innerHTML = `
                     <td>${escapeHtml(u.email)}</td>
-                    <td>${u.total_tokens}</td>
                     <td>${u.total_conversations}</td>
                     <td>${u.today_conversations}</td>
                     <td>${u.effective_daily_limit} 次/天</td>
@@ -2928,7 +3022,7 @@
                 tbody.appendChild(tr);
             });
         } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="7" class="admin-empty">加载失败，请重试</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="admin-empty">加载失败，请重试</td></tr>';
         }
     }
 
@@ -2986,7 +3080,7 @@
 
         // 填充设置表单（从全量用户列表取该用户的设置）
         try {
-            const resp = await fetch('/admin/users?sort_by=tokens&order=desc', {
+            const resp = await fetch('/admin/users?sort_by=conversations&order=desc', {
                 headers: getAuthHeaders()
             });
             if (resp.ok) {
@@ -2995,7 +3089,11 @@
                 if (u) {
                     document.getElementById('admin-set-limit').value = u.daily_max_conversations ?? '';
                     document.getElementById('admin-set-model').value = u.selected_model || '';
-                    document.getElementById('admin-set-apikey').value = u.api_key || '';
+                    // Key 不回传明文：输入框留空表示不修改，占位符展示脱敏值
+                    const keyInput = document.getElementById('admin-set-apikey');
+                    keyInput.value = '';
+                    keyInput.placeholder = u.api_key_masked ? `当前 ${u.api_key_masked}，留空则不修改` : '系统默认';
+                    document.getElementById('admin-clear-apikey-btn').style.display = u.has_api_key ? '' : 'none';
                 }
             }
         } catch (e) {
@@ -3034,6 +3132,10 @@
         const box = document.getElementById('admin-detail-file-content');
         box.style.display = 'block';
         box.textContent = '加载中';
+        // 窄屏下列表与内容上下排列，自动滚动到内容区；宽屏为左右分栏，无需滚动
+        if (window.matchMedia('(max-width: 999px)').matches) {
+            box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         try {
             const resp = await fetch(`/admin/users/${encodeURIComponent(email)}/file/${encodeURIComponent(filename)}`, {
                 headers: getAuthHeaders()
@@ -3076,9 +3178,14 @@
         }
         const body = {
             daily_max_conversations: dailyLimit,
-            selected_model: modelVal === '' ? null : modelVal,
-            api_key: apikeyVal === '' ? null : apikeyVal
+            selected_model: modelVal === '' ? null : modelVal
         };
+        // 留空表示不修改 Key（清空走「清除该用户 Key」按钮，避免保存时误清）
+        if (apikeyVal !== '') body.api_key = apikeyVal;
+
+        const saveBtn = document.getElementById('admin-save-settings-btn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = '校验中';
         try {
             const resp = await fetch(`/admin/users/${encodeURIComponent(adminDetailEmail)}/settings`, {
                 method: 'PUT',
@@ -3089,9 +3196,41 @@
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.detail || '保存失败');
             }
+            // 保存成功后重置 Key 输入框，并按最新状态刷新脱敏展示
+            document.getElementById('admin-set-apikey').value = '';
+            if (apikeyVal !== '') {
+                const masked = apikeyVal.length > 8 ? `${apikeyVal.slice(0, 4)}****${apikeyVal.slice(-4)}` : '****';
+                document.getElementById('admin-set-apikey').placeholder = `当前 ${masked}，留空则不修改`;
+                document.getElementById('admin-clear-apikey-btn').style.display = '';
+            }
             alert('设置已保存');
         } catch (e) {
             alert('保存失败：' + e.message);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '保存设置';
+        }
+    }
+
+    async function clearAdminApiKey() {
+        if (!adminDetailEmail) return;
+        if (!confirm(`确定清除 ${adminDetailEmail} 的自定义 API Key，改回系统默认？`)) return;
+        try {
+            const resp = await fetch(`/admin/users/${encodeURIComponent(adminDetailEmail)}/settings`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ api_key: null })
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.detail || '清除失败');
+            }
+            document.getElementById('admin-set-apikey').value = '';
+            document.getElementById('admin-set-apikey').placeholder = '系统默认';
+            document.getElementById('admin-clear-apikey-btn').style.display = 'none';
+            alert('已清除，该用户改回系统默认 Key');
+        } catch (e) {
+            alert('清除失败：' + e.message);
         }
     }
 
@@ -3123,13 +3262,132 @@
         // 填充功能设置（显示实际生效的限制值）
         const effectiveLimitDesktop = currentUser.effective_daily_limit;
         document.getElementById('setting-daily-limit').value = effectiveLimitDesktop + ' 次/天';
-        document.getElementById('setting-model').value = currentUser.settings?.selected_model || '';
         
-        // 填充高级设置（用户值为null时显示空，展示placeholder）
-        document.getElementById('setting-apikey').value = currentUser.settings?.api_key || '';
+        // 模型与 API Key（用户可自助修改，Key 只展示脱敏值）
+        fillLlmSettings();
         document.getElementById('setting-model-name').textContent = currentUser.model_name || '系统默认';
         
         document.getElementById('settings-modal').style.display = 'flex';
+    }
+    
+    // ==================== 模型与自定义 API Key（用户自助） ====================
+
+    // 当前端的输入控件（桌面弹窗 / 移动端菜单共用一套保存逻辑）
+    function getLlmSettingEls() {
+        return isMobile() ? {
+            model: document.getElementById('mobile-setting-model'),
+            key: document.getElementById('mobile-setting-apikey-input'),
+            keyState: document.getElementById('mobile-setting-apikey'),
+            saveBtn: document.getElementById('mobile-save-llm-btn'),
+            clearBtn: document.getElementById('mobile-clear-apikey-btn')
+        } : {
+            model: document.getElementById('setting-model'),
+            key: document.getElementById('setting-apikey'),
+            keyState: null,
+            saveBtn: document.getElementById('save-llm-btn'),
+            clearBtn: document.getElementById('clear-apikey-btn')
+        };
+    }
+
+    // 用 /auth/me 的数据填充模型下拉与 Key 展示（输入框留空表示不修改）
+    function fillLlmSettings() {
+        const els = getLlmSettingEls();
+        if (!els.model || !els.key) return;
+        const settings = currentUser?.settings || {};
+        const selectedModel = settings.selected_model || '';
+
+        // 管理员可能填了下拉框里没有的模型名，动态补一个选项，避免展示成“系统默认”后被误保存
+        if (selectedModel && !Array.from(els.model.options).some(o => o.value === selectedModel)) {
+            const opt = document.createElement('option');
+            opt.value = selectedModel;
+            opt.textContent = selectedModel;
+            els.model.appendChild(opt);
+        }
+        els.model.value = selectedModel;
+
+        els.key.value = '';
+        const masked = settings.api_key_masked || '';
+        els.key.placeholder = masked ? `当前 ${masked}，留空则不修改` : '留空使用系统默认';
+        if (els.keyState) els.keyState.textContent = masked ? `已设置（${masked}）` : '使用系统默认';
+        if (els.clearBtn) els.clearBtn.style.display = settings.has_api_key ? '' : 'none';
+    }
+
+    // 重新拉取当前用户信息，并刷新两端的“当前生效模型”展示
+    async function refreshCurrentUser() {
+        try {
+            const response = await fetch('/auth/me', { headers: getAuthHeaders() });
+            if (response.ok) currentUser = await response.json();
+        } catch (e) {
+            console.error('获取用户信息失败:', e);
+        }
+        const modelName = currentUser?.model_name || '系统默认';
+        ['setting-model-name', 'mobile-setting-model-name'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = modelName;
+        });
+    }
+
+    async function saveLlmSettings() {
+        if (!currentUser) return;
+        const els = getLlmSettingEls();
+        if (!els.model || !els.key) return;
+
+        const payload = { selected_model: els.model.value.trim() };
+        const keyVal = els.key.value.trim();
+        if (keyVal) payload.api_key = keyVal;
+
+        const originText = els.saveBtn ? els.saveBtn.textContent : '';
+        if (els.saveBtn) {
+            els.saveBtn.disabled = true;
+            els.saveBtn.textContent = '校验中';
+        }
+        try {
+            const resp = await fetch('/auth/settings', {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(data.detail || '保存失败');
+            els.key.value = '';
+            await refreshCurrentUser();
+            fillLlmSettings();
+            alert('设置已保存');
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            if (els.saveBtn) {
+                els.saveBtn.disabled = false;
+                els.saveBtn.textContent = originText;
+            }
+        }
+    }
+
+    async function clearApiKey() {
+        if (!currentUser?.settings?.has_api_key) {
+            alert('当前没有自定义 API Key');
+            return;
+        }
+        if (!confirm('清除后将改回系统默认 Key，确定继续？')) return;
+
+        const els = getLlmSettingEls();
+        if (els.clearBtn) els.clearBtn.disabled = true;
+        try {
+            const resp = await fetch('/auth/settings', {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ api_key: null })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(data.detail || '清除失败');
+            await refreshCurrentUser();
+            fillLlmSettings();
+            alert('已恢复使用系统默认');
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            if (els.clearBtn) els.clearBtn.disabled = false;
+        }
     }
     
     // 关闭设置弹窗

@@ -16,6 +16,7 @@ from src.utils.user_utils import (
     extract_usage_tokens,
     update_user_usage,
 )
+from src.utils.llm_utils import resolve_llm, describe_llm_error
 
 
 # 更新条件常量：至少间隔 2 天且新增 20 轮对话才能再次触发复盘
@@ -27,6 +28,7 @@ class ReviewService:
     """复盘服务：基于全部归档日记生成三段式复盘内容"""
 
     def __init__(self, model: str, openai_client: OpenAI = None, enable_thinking: bool = False):
+        # model / openai_client 为系统默认值；实际调用时按 user_email 解析（见 llm_utils.resolve_llm）
         self.model = model
         self.openai_client = openai_client
         self.enable_thinking = enable_thinking
@@ -196,14 +198,17 @@ class ReviewService:
 
         extra_body = {"enable_thinking": self.enable_thinking}
 
+        # 复盘消耗计入该用户，因此使用用户生效的客户端与模型
+        ctx = resolve_llm(user_email)
+
         try:
-            response = self.openai_client.chat.completions.create(
-                model=self.model,
+            response = ctx.client.chat.completions.create(
+                model=ctx.model,
                 messages=messages,
                 extra_body=extra_body,
             )
         except Exception as e:
-            raise Exception(f"API request failed: {str(e)}")
+            raise Exception(describe_llm_error(e, ctx))
 
         review_content = (response.choices[0].message.content or "").strip()
         if not review_content:

@@ -1,5 +1,6 @@
 from src.utils.file_utils import load_memory, update_memory_file
 from src.utils.user_utils import extract_usage_tokens, update_user_usage
+from src.utils.llm_utils import resolve_llm, describe_llm_error
 from openai import OpenAI
 
 
@@ -7,6 +8,7 @@ class MemoryService:
     """记忆服务类"""
     
     def __init__(self, model: str, openai_client: OpenAI = None, enable_thinking: bool = False):
+        # model / openai_client 为系统默认值；实际调用时按 user_email 解析（见 llm_utils.resolve_llm）
         self.model = model
         self.openai_client = openai_client
         self.enable_thinking = enable_thinking
@@ -87,9 +89,12 @@ class MemoryService:
         # 构建 extra_body 参数（明确传递 enable_thinking 控制深度思考）
         extra_body = {"enable_thinking": self.enable_thinking}
         
+        # 长期记忆更新属于该用户的 LLM 消耗，使用用户生效的客户端与模型
+        ctx = resolve_llm(user_email)
+        
         try:
-            memory_response = self.openai_client.chat.completions.create(
-                model=self.model,
+            memory_response = ctx.client.chat.completions.create(
+                model=ctx.model,
                 messages=memory_messages,
                 extra_body=extra_body
             )
@@ -102,4 +107,4 @@ class MemoryService:
             if user_email and memory_tokens > 0:
                 update_user_usage(user_email, tokens_increment=memory_tokens)
         except Exception as e:
-            print(f"Failed to update memory for user {user_email}: {str(e)}")
+            print(f"Failed to update memory for user {user_email}: {describe_llm_error(e, ctx)}")

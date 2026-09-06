@@ -7,22 +7,27 @@ from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from dotenv import load_dotenv
-from openai import OpenAI
+from typing import Any, Dict
 
 # 加载配置
 load_dotenv()
 
-# OpenAI 格式配置 - 支持任意兼容 OpenAI API 的提供商
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-MODEL = os.getenv("MODEL_NAME", "qwen-plus")
+# LLM 接入层：系统默认 key / 模型 / base_url 统一在 llm_utils 解析，
+# 用户自带的 api_key 与自选模型在每次调用时按 user_email 动态生效
+from src.utils.llm_utils import (
+    DEFAULT_MODEL,
+    get_system_client,
+    resolve_llm,
+    verify_llm_credentials,
+    mask_api_key,
+    invalidate_client_cache,
+)
+
+MODEL = DEFAULT_MODEL
 ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").lower() == "true"
 
-# 创建 OpenAI 客户端
-openai_client = OpenAI(
-    api_key=OPENAI_API_KEY,
-    base_url=OPENAI_BASE_URL
-)
+# 系统默认 OpenAI 客户端（用户未自带 key 时使用）
+openai_client = get_system_client()
 
 # IP 注册限制缓存：{ip: {日期: 次数}}
 ip_register_cache = {}
@@ -71,6 +76,16 @@ app.add_middleware(
 archive_service = ArchiveService(MODEL, openai_client, enable_thinking=ENABLE_THINKING)
 chat_service = ChatService(MODEL, openai_client, archive_service, enable_thinking=ENABLE_THINKING)
 review_service = ReviewService(MODEL, openai_client, enable_thinking=ENABLE_THINKING)
+
+
+def _mask_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
+    """对外输出用户设置：api_key 只回脱敏值与是否已配置的标记，明文不出后端"""
+    masked = dict(settings or {})
+    raw_key = masked.get("api_key")
+    masked["api_key"] = None
+    masked["has_api_key"] = bool(raw_key)
+    masked["api_key_masked"] = mask_api_key(raw_key)
+    return masked
 
 
 # ==================== 认证路由 ====================
@@ -181,24 +196,29 @@ async def get_me(current_email: str = Depends(get_current_user)):
     
     # 获取实际生效的每日限制
     effective_limit = get_effective_daily_limit(current_email)
+    settings = _mask_settings(user_info.get("settings", {}))
     
     return {
         "email": current_email,
         "user_id": user_info["user_id"],
         "created_at": user_info["created_at"],
-        "settings": user_info.get("settings", {}),
+        "settings": settings,
         "usage": user_info.get("usage", {}),
         "effective_daily_limit": effective_limit,
-        "model_name": MODEL,
+        # 生效模型：用户自选 > 系统默认
+        "model_name": settings.get("selected_model") or MODEL,
         "is_admin": False
     }
 
 
 @app.get("/auth/settings")
 async def get_settings(current_email: str = Depends(get_current_user)):
-    """获取用户设置"""
-    settings = get_user_settings(current_email)
-    return settings
+    """获取用户设置（api_key 脱敏返回）"""
+    return _mask_settings(get_user_settings(current_email))
+
+
+# 用户可自助修改的字段白名单：每日限额等管理字段仍由管理员配置，防止用户自行抬高额度
+USER_EDITABLE_SETTINGS = {"selected_model", "api_key"}
 
 
 @app.put("/auth/settings")
@@ -206,15 +226,40 @@ async def update_settings(
     settings_update: SettingsUpdateRequest,
     current_email: str = Depends(get_current_user)
 ):
-    """更新用户设置"""
-    # 转换为字典，排除None值
-    settings_dict = settings_update.model_dump(exclude_unset=True)
-    
-    success = update_user_settings(current_email, settings_dict)
-    if not success:
+    """更新用户设置（模型与自定义 API Key）
+
+    - 未出现在请求体中的字段保持原值；显式传 null / 空字符串表示清空回系统默认；
+    - 填写了自定义 Key 时先做一次真实校验，校验不通过不落库。
+    """
+    submitted = settings_update.model_dump(exclude_unset=True)
+    settings_dict = {k: v for k, v in submitted.items() if k in USER_EDITABLE_SETTINGS}
+    current_settings = get_user_settings(current_email) or {}
+
+    # 归一化本次生效值：提交了就用提交值（空值视为清空），未提交则沿用原值
+    if "api_key" in settings_dict:
+        next_key = (settings_dict.get("api_key") or "").strip() or None
+    else:
+        next_key = current_settings.get("api_key")
+    if "selected_model" in settings_dict:
+        next_model = (settings_dict.get("selected_model") or "").strip() or None
+    else:
+        next_model = current_settings.get("selected_model")
+
+    # 仅当存在自定义 Key 且配置发生变化时才校验；系统默认组合由部署方保证，不白耗一次调用
+    changed = (next_key != current_settings.get("api_key")) or (next_model != current_settings.get("selected_model"))
+    if next_key and changed:
+        ok, reason = verify_llm_credentials(next_key, next_model)
+        if not ok:
+            raise HTTPException(status_code=400, detail=reason)
+
+    settings_dict["api_key"] = next_key
+    settings_dict["selected_model"] = next_model
+    if not update_user_settings(current_email, settings_dict, allow_clear=True):
         raise HTTPException(status_code=500, detail="更新设置失败")
-    
-    return {"message": "设置已更新"}
+
+    # 配置变更后失效客户端缓存，保证下一次调用立即生效
+    invalidate_client_cache()
+    return {"message": "设置已更新", "settings": _mask_settings(get_user_settings(current_email))}
 
 
 # ==================== 管理后台接口（仅管理员） ====================
@@ -226,8 +271,8 @@ def _require_user_exists(email: str):
 
 
 @app.get("/admin/users")
-async def admin_list_users(sort_by: str = "tokens", order: str = "desc", _: str = Depends(get_current_admin)):
-    """获取全量用户列表，可按 token 用量 / 对话总量排序"""
+async def admin_list_users(sort_by: str = "conversations", order: str = "desc", _: str = Depends(get_current_admin)):
+    """获取全量用户列表，可按对话总量 / 今日对话 / token 用量排序"""
     all_users = get_all_users()
     today = datetime.now().strftime("%Y-%m-%d")
     env_limit = os.getenv("DAILY_MAX_CONVERSATIONS")
@@ -256,10 +301,16 @@ async def admin_list_users(sort_by: str = "tokens", order: str = "desc", _: str 
             "daily_max_conversations": user_limit,
             "effective_daily_limit": effective_limit,
             "selected_model": settings.get("selected_model"),
-            "api_key": settings.get("api_key"),
+            "has_api_key": bool(settings.get("api_key")),
+            "api_key_masked": mask_api_key(settings.get("api_key")),
         })
-    sort_field = "total_conversations" if sort_by == "conversations" else "total_tokens"
-    result.sort(key=lambda u: u[sort_field], reverse=(order != "asc"))
+    # 排序字段白名单，非法值回退到对话总量；同值时按对话总量做二级排序，保证列表稳定
+    sort_field = {
+        "conversations": "total_conversations",
+        "today": "today_conversations",
+        "tokens": "total_tokens",
+    }.get(sort_by, "total_conversations")
+    result.sort(key=lambda u: (u[sort_field], u["total_conversations"]), reverse=(order != "asc"))
     return {"users": result, "total": len(result)}
 
 
@@ -333,8 +384,16 @@ async def admin_update_settings(email: str, patch: AdminSettingsUpdateRequest, _
     """修改指定用户的设置（每日限额 / 模型 / api_key，null 清空回默认）"""
     _require_user_exists(email)
     payload = patch.model_dump(exclude_unset=True)
+    # 提交了新 Key 时先做真实校验，避免把不可用的组合写进用户配置
+    new_key = (payload.get("api_key") or "").strip() if "api_key" in payload else ""
+    if new_key:
+        ok, reason = verify_llm_credentials(new_key, payload.get("selected_model"))
+        if not ok:
+            raise HTTPException(status_code=400, detail=reason)
+        payload["api_key"] = new_key
     if not admin_update_user_settings(email, payload):
         raise HTTPException(status_code=500, detail="更新设置失败")
+    invalidate_client_cache()
     return {"message": "设置已保存"}
 
 
@@ -359,8 +418,9 @@ async def speech_to_text(audio: UploadFile = File(...), current_email: str = Dep
         base64_str = base64.b64encode(audio_data).decode()
         data_uri = f"data:{content_type};base64,{base64_str}"
 
-        # 调用 DashScope 语音识别模型
-        completion = openai_client.chat.completions.create(
+        # 调用 DashScope 语音识别模型（走用户生效的客户端：自带 Key 时消耗用户自己的额度）
+        ctx = resolve_llm(current_email)
+        completion = ctx.client.chat.completions.create(
             model="qwen3-asr-flash",
             messages=[
                 {

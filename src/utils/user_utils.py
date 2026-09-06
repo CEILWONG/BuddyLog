@@ -146,16 +146,22 @@ def get_user_id_by_email(email: str) -> Optional[str]:
     return user_info.get("user_id") if user_info else None
 
 
-def update_user_settings(email: str, settings: Dict[str, Any]) -> bool:
-    """更新用户设置"""
+def update_user_settings(email: str, settings: Dict[str, Any], allow_clear: bool = False) -> bool:
+    """更新用户设置
+
+    Args:
+        allow_clear: False（默认）跳过 None 值，保持历史行为；
+                     True 时显式传入的 None / 空字符串视为清空回系统默认
+    """
     index = _load_user_index()
     if email not in index:
         return False
     
-    # 只更新非None的字段
     current_settings = index[email].get("settings", {})
     for key, value in settings.items():
-        if value is not None:
+        if allow_clear:
+            current_settings[key] = None if (value is None or value == "") else value
+        elif value is not None:
             current_settings[key] = value
     
     index[email]["settings"] = current_settings
@@ -337,17 +343,9 @@ def admin_update_user_settings(email: str, settings_patch: Dict[str, Any]) -> bo
     """
     管理员更新用户设置：传入字段直接覆盖，空值（None/空字符串）清空为 None。
 
-    与 update_user_settings 不同，这里不跳过 None，支持把字段重置为默认。
+    与用户自助更新不同，这里不跳过 None，支持把字段重置为默认。
     """
-    index = _load_user_index()
-    if email not in index:
-        return False
-    current_settings = index[email].get("settings", {})
-    for key, value in settings_patch.items():
-        current_settings[key] = None if (value is None or value == "") else value
-    index[email]["settings"] = current_settings
-    _save_user_index(index)
-    return True
+    return update_user_settings(email, settings_patch, allow_clear=True)
 
 
 def get_user_review_meta(email: str) -> Dict[str, Any]:

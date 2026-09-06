@@ -13,6 +13,7 @@ from src.utils.file_utils import (
 )
 from src.services.memory_service import MemoryService
 from src.utils.user_utils import extract_usage_tokens, update_user_usage
+from src.utils.llm_utils import resolve_llm, describe_llm_error
 from openai import OpenAI
 
 
@@ -20,12 +21,13 @@ class ArchiveService:
     """归档服务类"""
     
     def __init__(self, model: str, openai_client: OpenAI = None, enable_thinking: bool = False):
+        # model / openai_client 为系统默认值；实际调用时按 user_email 解析（见 llm_utils.resolve_llm）
         self.model = model
         self.openai_client = openai_client
         self.enable_thinking = enable_thinking
         self.memory_service = MemoryService(model, openai_client, enable_thinking)
     
-    def extract_structured_data(self, conversation: list) -> Dict[str, List[str]]:
+    def extract_structured_data(self, conversation: list, user_email: str = None) -> Dict[str, List[str]]:
         """从对话中提取结构化信息"""
         extraction_prompt = """
         请从以下对话中提取结构化信息，格式为JSON：
@@ -55,20 +57,22 @@ class ArchiveService:
         # 构建 extra_body 参数（明确传递 enable_thinking 控制深度思考）
         extra_body = {"enable_thinking": self.enable_thinking}
         
+        ctx = resolve_llm(user_email)
+        
         try:
-            extraction_response = self.openai_client.chat.completions.create(
-                model=self.model,
+            extraction_response = ctx.client.chat.completions.create(
+                model=ctx.model,
                 messages=extraction_messages,
                 extra_body=extra_body
             )
         except Exception as e:
-            raise Exception(f"API request failed: {str(e)}")
+            raise Exception(describe_llm_error(e, ctx))
         
         structured_data = json.loads(extraction_response.choices[0].message.content)
         tokens = extract_usage_tokens(getattr(extraction_response, "usage", None))
         return structured_data, tokens
     
-    def generate_diary_article(self, conversation: list, date_str: str = None) -> tuple:
+    def generate_diary_article(self, conversation: list, date_str: str = None, user_email: str = None) -> tuple:
         """生成日记文章，返回 (日记文章, 本次消耗的token数)"""
         if not date_str:
             date_str = datetime.date.today().isoformat()
@@ -123,14 +127,17 @@ class ArchiveService:
         # 构建 extra_body 参数（明确传递 enable_thinking 控制深度思考）
         extra_body = {"enable_thinking": self.enable_thinking}
         
+        # 归档消耗计入该用户，因此使用用户生效的客户端与模型
+        ctx = resolve_llm(user_email)
+        
         try:
-            article_response = self.openai_client.chat.completions.create(
-                model=self.model,
+            article_response = ctx.client.chat.completions.create(
+                model=ctx.model,
                 messages=article_messages,
                 extra_body=extra_body
             )
         except Exception as e:
-            raise Exception(f"API request failed: {str(e)}")
+            raise Exception(describe_llm_error(e, ctx))
 
         diary_article = article_response.choices[0].message.content
         tokens = extract_usage_tokens(getattr(article_response, "usage", None))
@@ -161,7 +168,7 @@ class ArchiveService:
         structured_data = {"events": [], "people": [], "emotions": [], "ideas": []}
         
         # 生成日记文章（必须等待完成，用于保存文件）
-        diary_article, article_tokens = self.generate_diary_article(conversation, date_str)
+        diary_article, article_tokens = self.generate_diary_article(conversation, date_str, user_email)
         
         # 归档产生的 LLM 消耗记账（手动/自动归档均走此路径；只计 tokens 不计对话轮次）
         if user_email and article_tokens > 0:

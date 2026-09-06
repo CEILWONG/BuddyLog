@@ -12,6 +12,7 @@ from src.utils.file_utils import (
     extract_profile_without_persona
 )
 from src.utils.user_utils import extract_usage_tokens, update_user_usage
+from src.utils.llm_utils import resolve_llm, describe_llm_error
 from openai import OpenAI
 
 
@@ -19,6 +20,7 @@ class ChatService:
     """聊天服务类"""
     
     def __init__(self, model: str, openai_client: OpenAI, archive_service=None, enable_thinking: bool = False):
+        # model / openai_client 为系统默认值；实际调用时按 user_email 解析（见 llm_utils.resolve_llm）
         self.model = model
         self.openai_client = openai_client
         self.archive_service = archive_service
@@ -159,14 +161,17 @@ class ChatService:
         # 构建 extra_body 参数（明确传递 enable_thinking 控制深度思考）
         extra_body = {"enable_thinking": self.enable_thinking}
         
+        # 按用户解析生效的客户端与模型（自带 Key / 自选模型优先，未配置回落系统默认）
+        ctx = resolve_llm(user_email)
+        
         try:
-            response = self.openai_client.chat.completions.create(
-                model=self.model,
+            response = ctx.client.chat.completions.create(
+                model=ctx.model,
                 messages=messages,
                 extra_body=extra_body
             )
         except Exception as e:
-            raise Exception(f"API request failed: {str(e)}")
+            raise Exception(describe_llm_error(e, ctx))
         
         # 提取回复内容
         raw_content = response.choices[0].message.content
@@ -276,9 +281,12 @@ class ChatService:
         
         extra_body = {"enable_thinking": self.enable_thinking}
         
+        # 开场白同样按用户解析客户端与模型
+        ctx = resolve_llm(user_email)
+        
         try:
-            response = self.openai_client.chat.completions.create(
-                model=self.model,
+            response = ctx.client.chat.completions.create(
+                model=ctx.model,
                 messages=messages,
                 extra_body=extra_body
             )
@@ -294,7 +302,7 @@ class ChatService:
                 reply = reply[:-3]
             return reply.strip()
         except Exception as e:
-            print(f"生成开场白失败: {e}")
+            print(f"生成开场白失败: {describe_llm_error(e, ctx)}")
             return f"早上好。今天是{date_str} {weekday}。\n今天想记录些什么呢？"
     
     def _background_archive(self, user_email: str = None):
