@@ -3548,13 +3548,7 @@
             const settings = currentUser?.settings || {};
             const selectedModel = settings.selected_model || '';
 
-            // 管理员可能填了下拉框里没有的模型名，动态补一个选项，避免展示成“系统默认”后被误保存
-            if (selectedModel && !Array.from(els.model.options).some(o => o.value === selectedModel)) {
-                const opt = document.createElement('option');
-                opt.value = selectedModel;
-                opt.textContent = selectedModel;
-                els.model.appendChild(opt);
-            }
+            // input+datalist 是自由输入框，不需要预置 option，直接填入值即可
             els.model.value = selectedModel;
 
             els.key.value = '';
