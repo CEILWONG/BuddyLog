@@ -84,8 +84,10 @@ def mask_api_key(api_key: Optional[str]) -> str:
 def resolve_llm(user_email: Optional[str] = None) -> LLMContext:
     """解析某次调用生效的客户端与模型
 
-    优先级：用户设置的 api_key / selected_model > 系统默认（环境变量）。
-    用户不存在或未配置时回落系统默认，不抛异常。
+    优先级：用户设置的 api_key > 系统默认（环境变量）。
+    自选模型遵循「模型跟随 Key」策略：仅当用户配置了自己的 api_key 时
+    selected_model 才生效；无 Key 一律回落系统默认模型，杜绝用户不花自己的钱
+    却用系统 Key 跑贵模型。用户不存在或未配置时回落系统默认，不抛异常。
     """
     if not user_email:
         return LLMContext(_system_client, DEFAULT_MODEL, False)
@@ -95,8 +97,9 @@ def resolve_llm(user_email: Optional[str] = None) -> LLMContext:
 
     settings = get_user_settings(user_email) or {}
     api_key = (settings.get("api_key") or "").strip()
-    model = (settings.get("selected_model") or "").strip() or DEFAULT_MODEL
-    return LLMContext(get_client_for_key(api_key), model, bool(api_key))
+    # 模型跟随 Key：无自定义 Key 时忽略 selected_model
+    model = (settings.get("selected_model") or "").strip() if api_key else ""
+    return LLMContext(get_client_for_key(api_key), model or DEFAULT_MODEL, bool(api_key))
 
 
 def describe_llm_error(err: Exception, ctx: LLMContext) -> str:

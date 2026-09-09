@@ -205,8 +205,8 @@ async def get_me(current_email: str = Depends(get_current_user)):
         "settings": settings,
         "usage": user_info.get("usage", {}),
         "effective_daily_limit": effective_limit,
-        # 生效模型：用户自选 > 系统默认
-        "model_name": settings.get("selected_model") or MODEL,
+        # 生效模型（模型跟随 Key）：仅当配置了自己的 Key 时自选模型才生效，否则系统默认
+        "model_name": (settings.get("selected_model") if settings.get("has_api_key") else None) or MODEL,
         "is_admin": False
     }
 
@@ -229,7 +229,8 @@ async def update_settings(
     """更新用户设置（模型与自定义 API Key）
 
     - 未出现在请求体中的字段保持原值；显式传 null / 空字符串表示清空回系统默认；
-    - 填写了自定义 Key 时先做一次真实校验，校验不通过不落库。
+    - 模型跟随 Key：未配置自定义 Key 时自选模型会被强制清空，回落系统默认；
+    - 填写了自定义 Key 时先做一次真实校验（Key + 模型组合），校验不通过不落库。
     """
     submitted = settings_update.model_dump(exclude_unset=True)
     settings_dict = {k: v for k, v in submitted.items() if k in USER_EDITABLE_SETTINGS}
@@ -244,6 +245,10 @@ async def update_settings(
         next_model = (settings_dict.get("selected_model") or "").strip() or None
     else:
         next_model = current_settings.get("selected_model")
+
+    # 模型跟随 Key：没有自定义 Key 就不允许自选模型，强制清空回落系统默认
+    if not next_key:
+        next_model = None
 
     # 仅当存在自定义 Key 且配置发生变化时才校验；系统默认组合由部署方保证，不白耗一次调用
     changed = (next_key != current_settings.get("api_key")) or (next_model != current_settings.get("selected_model"))
