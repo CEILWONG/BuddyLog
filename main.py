@@ -5,7 +5,7 @@ import zipfile
 from datetime import datetime, date
 from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from dotenv import load_dotenv
 from typing import Any, Dict
 
@@ -576,23 +576,6 @@ async def get_announcement():
     except Exception as e:
         print(f"读取公告文件失败: {e}")
         return {"content": default_message}
-
-
-@app.get("/donate-qrcode")
-async def get_donate_qrcode():
-    """返回捐赠二维码图片（无需认证），图片放在 DATA_DIR 下"""
-    from src.utils.file_utils import DATA_DIR
-    candidates = {
-        "donate.png": "image/png",
-        "donate.jpg": "image/jpeg",
-        "donate.jpeg": "image/jpeg",
-        "donate.webp": "image/webp",
-    }
-    for name, media_type in candidates.items():
-        path = os.path.join(DATA_DIR, name)
-        if os.path.exists(path):
-            return FileResponse(path, media_type=media_type)
-    raise HTTPException(status_code=404, detail="Donation QR code not configured")
 
 
 @app.get("/greeting")
