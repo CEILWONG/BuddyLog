@@ -5,7 +5,7 @@ import zipfile
 from datetime import datetime, date
 from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from dotenv import load_dotenv
 from typing import Any, Dict
 
