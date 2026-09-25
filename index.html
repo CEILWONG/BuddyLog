@@ -2546,7 +2546,7 @@
                     <label for="setting-apikey">自定义 API Key</label>
                     <input type="password" id="setting-apikey" placeholder="留空则不修改" maxlength="200" autocomplete="off"
                         oninput="syncModelEditable()">
-                    <p class="hint">填入自己的 Key 后，对话、归档与复盘将消耗你自己的额度；留空使用系统默认</p>
+                    <p class="hint">自 2026 年 9 月 25 日起不再提供默认 Key；请前往阿里云百炼（bailian.console.aliyun.com）自行申请 API Key 填入此处，费用由你自己承担</p>
                     <div style="display: flex; gap: 8px; margin-top: 10px;">
                         <button type="button" class="btn-primary" id="save-llm-btn" style="padding: 9px 20px;"
                             onclick="saveLlmSettings()">保存设置</button>
@@ -2823,7 +2823,7 @@
                     <h4>🔑 高级设置</h4>
                     <div class="mobile-setting-item">
                         <label>API Key</label>
-                        <p id="mobile-setting-apikey">使用系统默认</p>
+                        <p id="mobile-setting-apikey">未配置</p>
                         <input type="password" id="mobile-setting-apikey-input" placeholder="留空则不修改" maxlength="200"
                             autocomplete="off" oninput="syncModelEditable()">
                     </div>
@@ -2910,6 +2910,9 @@
         const mobileNavArchive = document.getElementById('mobile-nav-archive');
         const mobileNavReview = document.getElementById('mobile-nav-review');
         const mobileUserModal = document.getElementById('mobile-user-modal');
+
+        // 自 2026-09-25 起不再提供默认 Key：提示文案与后端 /chat 返回保持逐字一致
+        const LLM_KEY_REQUIRED_TIP = "自 2026 年 9 月 25 日起，本应用不再提供默认的免费 AI Key，对话、归档与复盘等 AI 功能需配置你自己的 API Key 后才能继续使用。\n\n配置三步走：\n1. 前往阿里云百炼控制台（bailian.console.aliyun.com）注册并申请你的专属 API Key；\n2. 按需充值，费用由你自己承担（按实际用量计费）；\n3. 回到本应用，在「我的」→「高级设置」→「API Key」中填入并保存，即可正常使用。";
 
         let history = [];
         let currentMobileView = 'chat';
@@ -3509,8 +3512,8 @@
 
             els.key.value = '';
             const masked = settings.api_key_masked || '';
-            els.key.placeholder = masked ? `当前 ${masked}，留空则不修改` : '留空使用系统默认';
-            if (els.keyState) els.keyState.textContent = masked ? `已设置（${masked}）` : '使用系统默认';
+            els.key.placeholder = masked ? `当前 ${masked}，留空则不修改` : '系统已不再提供默认 Key，请填入自己的 API Key';
+            if (els.keyState) els.keyState.textContent = masked ? `已设置（${masked}）` : '未配置（默认 Key 已停用）';
             if (els.clearBtn) els.clearBtn.style.display = settings.has_api_key ? '' : 'none';
 
             // 根据 Key 状态同步模型输入框的可编辑性（已有 Key 或输入框里填了新 Key 时允许编辑）
@@ -3584,7 +3587,7 @@
                 alert('当前没有自定义 API Key');
                 return;
             }
-            if (!confirm('清除后将改回系统默认 Key，确定继续？')) return;
+            if (!confirm('清除后将无法使用 AI 对话与复盘功能，确定继续？')) return;
 
             const els = getLlmSettingEls();
             if (els.clearBtn) els.clearBtn.disabled = true;
@@ -3598,7 +3601,7 @@
                 if (!resp.ok) throw new Error(data.detail || '清除失败');
                 await refreshCurrentUser();
                 fillLlmSettings();
-                alert('已恢复使用系统默认');
+                alert('已清除 API Key；自 2026 年 9 月 25 日起不再提供默认 Key，AI 功能将暂不可用');
             } catch (e) {
                 alert(e.message);
             } finally {
@@ -3963,6 +3966,18 @@
             const body = document.getElementById('mobile-review-body');
             const updateBtn = document.getElementById('mobile-review-update-btn');
             if (!body) return;
+
+            // 自 2026-09-25 起不再提供默认 Key：未配置自己的 API Key 时复盘不可用，展示引导空态
+            if (!currentUser?.settings?.has_api_key && !currentUser?.is_admin) {
+                updateBtn.style.display = 'none';
+                body.innerHTML = `
+                <div class="review-empty">
+                    <div class="icon">🔑</div>
+                    <p>复盘功能需要配置你自己的 API Key 才能使用。<br>自 2026 年 9 月 25 日起，本应用不再提供默认的免费 AI Key，请前往阿里云百炼（bailian.console.aliyun.com）申请你自己的 API Key，填入「我的」→「高级设置」→「API Key」后即可正常生成复盘。</p>
+                    <button onclick="isMobile() ? openMobileUserMenu() : openSettings()">去配置 API Key</button>
+                </div>`;
+                return;
+            }
 
             const canInfo = (data && data.can_update_info) || { can_update: true, is_first: true };
 
@@ -4516,6 +4531,12 @@
             const text = inputEl.value.trim();
             if (!text) return;
 
+            // 自 2026-09-25 起不再提供默认 Key：未配置自己的 API Key 时前端直接提示（不发起请求）
+            if (!currentUser?.settings?.has_api_key && !currentUser?.is_admin) {
+                appendMessage('buddy', LLM_KEY_REQUIRED_TIP);
+                return;
+            }
+
             appendMessage('user', text);
             inputEl.value = '';
             inputEl.style.height = 'auto';
@@ -4552,19 +4573,20 @@
                     return;
                 }
 
+                // 后端拦截提示（如 Key 失效等）：撤回该轮用户消息，仅展示提示，不写日记
+                if (data.blocked) {
+                    history.pop();
+                    appendMessage('buddy', data.reply || LLM_KEY_REQUIRED_TIP);
+                    targetChatBox.scrollTop = targetChatBox.scrollHeight;
+                    return;
+                }
+
                 appendMessage('buddy', data.reply);
 
                 const note = document.createElement('div');
                 note.className = 'system-note';
-                const todayCount = data.today_count ? ` · 今日第${data.today_count}轮` : '';
-                note.innerText = `◉ MOSS 已记下${todayCount}`;
+                note.innerText = '◉ MOSS 已记下';
                 targetChatBox.appendChild(note);
-
-                // 每次对话后的费用说明提示（代替原 token 消耗与捐赠入口）
-                const feeNote = document.createElement('div');
-                feeNote.className = 'system-note';
-                feeNote.innerText = '◉ 由于 AI 费用高涨，9月底前将取消默认的 AI API；如需继续使用，可自行前往阿里云申请 API，并填入应用的设置中。';
-                targetChatBox.appendChild(feeNote);
 
                 // 显示后台归档提示（放到最后）
                 if (data.archiving_notice) {

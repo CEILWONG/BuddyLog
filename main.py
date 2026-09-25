@@ -21,6 +21,9 @@ from src.utils.llm_utils import (
     verify_llm_credentials,
     mask_api_key,
     invalidate_client_cache,
+    has_custom_api_key,
+    LLM_KEY_REQUIRED_TIP,
+    LLM_KEY_REQUIRED_GREETING,
 )
 
 MODEL = DEFAULT_MODEL
@@ -466,6 +469,14 @@ async def speech_to_text(audio: UploadFile = File(...), current_email: str = Dep
 async def chat(msg: Message, current_email: str = Depends(get_current_user)):
     """聊天接口"""
     try:
+        # 自 2026-09-25 起不再提供默认 Key：未配置自己的 API Key 时直接提示，不调用 LLM、不写入日记
+        if not has_custom_api_key(current_email):
+            return {
+                "reply": LLM_KEY_REQUIRED_TIP,
+                "blocked": True,
+                "tokens": {"input": 0, "output": 0, "total": 0},
+            }
+
         # 检查用户限制
         limit_check = check_user_limit(current_email)
         if not limit_check["allowed"]:
@@ -478,9 +489,6 @@ async def chat(msg: Message, current_email: str = Depends(get_current_user)):
         tokens_data = result.get("tokens", {})
         tokens_total = tokens_data.get("total", 0) if isinstance(tokens_data, dict) else tokens_data
         update_user_usage(current_email, conversations_increment=1, tokens_increment=tokens_total)
-        
-        # 本轮是今天的第几轮对话
-        result["today_count"] = limit_check["current"] + 1
         
         return result
     except HTTPException:
@@ -581,6 +589,9 @@ async def get_announcement():
 @app.get("/greeting")
 async def get_greeting(current_email: str = Depends(get_current_user)):
     """生成个性化AI开场白（需认证）"""
+    # 未配置自己的 API Key 时返回固定引导开场白，不再调用 LLM
+    if not has_custom_api_key(current_email):
+        return {"greeting": LLM_KEY_REQUIRED_GREETING}
     greeting = chat_service.generate_greeting(current_email)
     return {"greeting": greeting}
 
@@ -616,6 +627,13 @@ async def get_review(current_email: str = Depends(get_current_user)):
 async def create_or_update_review(current_email: str = Depends(get_current_user)):
     """生成或更新复盘（后端统一校验更新条件）"""
     try:
+        # 自 2026-09-25 起不再提供默认 Key：未配置自己的 API Key 时复盘不可用
+        if not has_custom_api_key(current_email):
+            raise HTTPException(
+                status_code=403,
+                detail=LLM_KEY_REQUIRED_TIP.replace("\n", " ") + " 复盘功能因此暂不可用，请先配置后再试。",
+            )
+
         # 后端统一校验
         can_info = review_service.can_update_review(current_email)
         if not can_info.get("can_update"):

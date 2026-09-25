@@ -25,6 +25,25 @@ DEFAULT_MODEL = os.getenv("MODEL_NAME", "qwen-plus")
 # 保存 Key 时是否做一次真实校验；个别兼容端点不支持极短补全时可置为 false
 VERIFY_KEY_ON_SAVE = os.getenv("LLM_KEY_VERIFY", "true").lower() == "true"
 
+# 自 2026-09-25 起不再向用户提供默认 Key：以下两条文案在 /chat、/greeting、/review 等接口与前端共用
+LLM_KEY_REQUIRED_TIP = (
+    "自 2026 年 9 月 25 日起，本应用不再提供默认的免费 AI Key，"
+    "对话、归档与复盘等 AI 功能需配置你自己的 API Key 后才能继续使用。\n\n"
+    "配置三步走：\n"
+    "1. 前往阿里云百炼控制台（bailian.console.aliyun.com）注册并申请你的专属 API Key；\n"
+    "2. 按需充值，费用由你自己承担（按实际用量计费）；\n"
+    "3. 回到本应用，在「我的」→「高级设置」→「API Key」中填入并保存，即可正常使用。"
+)
+
+# 未配置 Key 时使用的固定开场白（不再调用 LLM 生成）
+LLM_KEY_REQUIRED_GREETING = (
+    "你好，我是 MOSS。\n\n"
+    "这里自 2026 年 9 月 25 日起不再提供默认的免费 AI Key："
+    "去阿里云百炼（bailian.console.aliyun.com）申请你自己的 API Key，"
+    "在「我的」→「高级设置」→「API Key」中填入保存后，"
+    "我就能继续陪你记录每天的点滴、做复盘回顾了。"
+)
+
 # 系统默认客户端
 _system_client = OpenAI(api_key=SYSTEM_API_KEY, base_url=OPENAI_BASE_URL)
 
@@ -69,6 +88,25 @@ def invalidate_client_cache(api_key: Optional[str] = None):
             _client_cache.clear()
         else:
             _client_cache.pop((api_key or "").strip(), None)
+
+
+def has_custom_api_key(user_email: Optional[str]) -> bool:
+    """当前用户是否具备使用 LLM 功能的资格
+
+    自 2026-09-25 起不再向用户提供默认 Key：
+    - 管理员（部署者本人）视为拥有系统默认 Key 的使用资格，不受限制；
+    - 普通用户必须配置自己的 api_key 才允许调用对话 / 复盘等 LLM 功能。
+    """
+    if not user_email:
+        return False
+    # 延迟导入：auth_utils 在运行期已完全加载，避免模块级循环依赖
+    from src.utils.auth_utils import ADMIN_EMAIL
+    if user_email == ADMIN_EMAIL:
+        return True
+    from src.utils.user_utils import get_user_settings
+
+    settings = get_user_settings(user_email) or {}
+    return bool((settings.get("api_key") or "").strip())
 
 
 def mask_api_key(api_key: Optional[str]) -> str:
