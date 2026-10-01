@@ -8,6 +8,7 @@ from src.utils.file_utils import (
     load_review,
     save_review,
     load_all_archived_diaries_for_review,
+    build_metrics_summary,
 )
 from src.utils.user_utils import (
     get_user_by_email,
@@ -48,6 +49,8 @@ class ReviewService:
             "sections": sections,
             "meta": meta,
             "can_update_info": can_update_info,
+            # 真实指标统计（近 30 天），前端数据看板直接消费
+            "metrics_summary": build_metrics_summary(user_email),
         }
 
     def can_update_review(self, user_email: str) -> Dict[str, Any]:
@@ -130,6 +133,8 @@ class ReviewService:
         previous_content = load_review(user_email)
         meta = get_user_review_meta(user_email)
         baseline_count = meta.get("diary_count")
+        # 后端聚合的真实指标统计（数据看板 + prompt 权威数据段共用）
+        metrics_summary = build_metrics_summary(user_email)
 
         # 增量模式需要完整未截断的日记列表来按基线切片，故传大 max_chars
         diaries = load_all_archived_diaries_for_review(user_email, max_chars=10**9)
@@ -166,6 +171,7 @@ class ReviewService:
                 earliest=earliest,
                 latest=latest,
                 span_months=span_months,
+                metrics_summary=metrics_summary,
             )
         else:
             if previous_content and not new_diaries:
@@ -192,6 +198,7 @@ class ReviewService:
                 earliest=earliest,
                 latest=latest,
                 span_months=span_months,
+                metrics_summary=metrics_summary,
             )
 
         messages = [{"role": "system", "content": prompt}]
@@ -250,6 +257,7 @@ class ReviewService:
             "sections": sections,
             "meta": meta,
             "can_update_info": self.can_update_review(user_email),
+            "metrics_summary": metrics_summary,
         }
 
     # ---------------- 内部工具 ----------------
@@ -261,13 +269,16 @@ class ReviewService:
         earliest: str = "",
         latest: str = "",
         span_months: int = 1,
+        metrics_summary: Optional[dict] = None,
     ) -> str:
         """构建复盘 system prompt，强约束三段式输出
 
         说明：仅以用户原始发言为唯一语料，不投喂长期记忆、AI 回复、日记总结等交叉产物，
-        避免多轮推论偏差。同时注入时间锚点与分布约束，防止「高光焦集于早期月份」的偏斜问题。"""
+        避免多轮推论偏差。同时注入时间锚点、真实数据统计段与分布约束，
+        防止「高光焦集于早期月份」的偏斜问题及数据幻觉。"""
 
         distribution_rule = self._distribution_rule(span_months)
+        metrics_section = self._build_metrics_data_section(metrics_summary)
 
         date_anchor = ""
         if today_str:
@@ -279,6 +290,7 @@ class ReviewService:
 
         return f"""你是一位高级心理成长学专家，同时也是这位用户的私人观察者。请仅基于用户亲口说出的原始话语（日记中的本人发言），为TA撰写一篇高质量的复盘报告。
 {date_anchor}
+{metrics_section}
 【输入资料】
 
 # 用户历史日记（按日期升序，仅含用户本人发言）
@@ -345,18 +357,22 @@ class ReviewService:
         earliest: str,
         latest: str,
         span_months: int,
+        metrics_summary: Optional[dict] = None,
     ) -> str:
         """构建增量复盘 system prompt：上次复盘结果 + 新增用户原话，合并产出新一版三段式复盘。
 
         语料约束：新增部分仍只含用户本人发言；上次复盘作为「历史结论的浓缩载体」参与合并，
-        但所有新增结论必须能在新增日记中找到依据，不得从旧复盘中无根据地推演新事实。"""
+        但所有新增结论必须能在新增日记中找到依据，不得从旧复盘中无根据地推演新事实。
+        同时注入用户真实数据统计段，洞察必须引用而非推算。"""
         new_diary_text = "\n\n".join(
             f"【{item['date']}】\n{item['user_text']}" for item in new_diaries
         )
         distribution_rule = self._distribution_rule(span_months)
+        metrics_section = self._build_metrics_data_section(metrics_summary)
 
         return f"""你是一位高级心理成长学专家，同时也是这位用户的私人观察者。你之前已经为TA写过一版复盘，现在用户又积累了新的对话，请基于「上一版复盘 + 新增对话」合并更新出新一版复盘报告。
 【时间锚点】今天是 {today_str}；用户日记总时间跨度：{earliest} → {latest}（共 {span_months} 个月份）。
+{metrics_section}
 【输入资料】
 # 上一版复盘（历史结论的浓缩载体）
 {previous_review}
@@ -394,6 +410,49 @@ class ReviewService:
 - 全部基于真实内容推演，不要给出与用户处境无关的通用鸡汤。
 
 请直接开始输出 Markdown，不要重复以上要求。"""
+
+    @staticmethod
+    def _build_metrics_data_section(metrics_summary: Optional[dict]) -> str:
+        """把后端聚合的真实指标统计转成复盘 prompt 权威数据段
+
+        统计数字全部由系统基于用户记录实时计算（见 build_metrics_summary），
+        AI 只能逐字引用，严禁自行推算或编造。
+        """
+        if not metrics_summary:
+            return ""
+        config = metrics_summary.get("config") or {}
+        stats = metrics_summary.get("stats") or {}
+        if not config:
+            return ""
+
+        lines = []
+        for key, meta in config.items():
+            s = stats.get(key) or {}
+            label = meta.get("label") or key
+            unit = meta.get("unit") or ""
+            count = int(s.get("count", 0) or 0)
+            if count <= 0:
+                continue  # 无记录不在 prompt 中占位
+            if s.get("type") == "number":
+                if count == 1:
+                    lines.append(f"- {label}：仅 1 次记录，当前 {s.get('last')}{unit}")
+                else:
+                    lines.append(
+                        f"- {label}：共 {count} 次记录，{s.get('first')}{unit} → {s.get('last')}{unit}"
+                        f"（变化 {s.get('change', 0):+.2f}{unit}，期间最低 {s.get('min')}{unit} / 最高 {s.get('max')}{unit}）"
+                    )
+            else:
+                lines.append(
+                    f"- {label}：近 30 天共 {s.get('recent_total', 0)} 次，"
+                    f"记录覆盖 {s.get('active_days', 0)} 天，日均 {s.get('daily_avg', 0)} 次"
+                )
+
+        if not lines:
+            return ""
+        lines.insert(0, "【用户数据统计（近 30 天，由系统基于用户真实记录计算，唯一权威来源）】")
+        lines.append("")
+        lines.append("引用规则：洞察等部分若引用以上统计数字，必须与本段逐字一致；严禁自行推算、编造或杜撰数据。")
+        return "\n" + "\n".join(lines) + "\n"
 
     @staticmethod
     def _split_sections(content: str) -> Dict[str, str]:

@@ -1140,6 +1140,134 @@
             animation: review-led-pulse 1.4s ease-in-out infinite;
         }
 
+        /* 数据看板（复盘页顶部） */
+        .metrics-board {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 16px;
+            border-radius: 10px;
+            padding: 14px 14px 12px;
+            background: linear-gradient(180deg, rgba(10, 18, 38, 0.85), rgba(13, 17, 48, 0.6));
+            border: 1px solid rgba(0, 212, 255, 0.18);
+            backdrop-filter: blur(4px);
+        }
+
+        .metrics-board-head {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .metrics-board-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: #e0f7ff;
+            text-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+        }
+
+        .metrics-board-sub {
+            font-size: 0.7rem;
+            color: #64748b;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .metric-card {
+            position: relative;
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.85), rgba(13, 17, 48, 0.6));
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            overflow: hidden;
+        }
+
+        .metric-card.empty {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 96px;
+        }
+
+        .metric-label {
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #7df4ff;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            line-height: 1.25;
+            text-shadow: 0 0 16px rgba(0, 212, 255, 0.35);
+        }
+
+        .metric-unit {
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: #94a3b8;
+            margin-left: 3px;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+        }
+
+        .metric-delta {
+            font-size: 0.68rem;
+            margin-top: 2px;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+        }
+
+        .metric-delta.up {
+            color: #6cffc1;
+        }
+
+        .metric-delta.down {
+            color: #ff9adb;
+        }
+
+        .metric-sub {
+            font-size: 0.68rem;
+            color: #94a3b8;
+            margin-top: 2px;
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+        }
+
+        .metric-spark {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 34px;
+            margin-top: 8px;
+        }
+
+        .metric-spark i {
+            flex: 1;
+            min-width: 2px;
+            border-radius: 2px 2px 0 0;
+            background: linear-gradient(180deg, rgba(0, 212, 255, 0.85), rgba(0, 212, 255, 0.25));
+        }
+
+        .metric-nodata {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin: 2px 0;
+        }
+
+        .metric-hint {
+            font-size: 0.66rem;
+            color: #475569;
+            line-height: 1.5;
+        }
+
         /* 模块卡片 */
         .review-card {
             position: relative;
@@ -3962,15 +4090,97 @@
             setupReviewAnchors();
         }
 
+        function renderMetricsBoard(ms) {
+            if (!ms || !ms.config) return '';
+            const config = ms.config || {};
+            const stats = ms.stats || {};
+            const recent = ms.recent || {};
+            const keys = Object.keys(config);
+            if (!keys.length) return '';
+
+            const fmt = (v) => {
+                const n = Number(v);
+                return Number.isFinite(n) ? (Math.round(n * 100) / 100) : 0;
+            };
+            const esc = escapeHtml;
+
+            // 迷你趋势条：取近期最多 14 条记录，按值归一化高度（无图表库，纯 CSS）
+            function spark(key, type) {
+                const pts = [];
+                for (const d in recent) {
+                    const v = recent[d] && recent[d][key];
+                    if (typeof v === 'number' && Number.isFinite(v)) pts.push(v);
+                }
+                const last = pts.slice(-14);
+                if (!last.length) return '';
+                const max = Math.max.apply(null, last);
+                const min = Math.min.apply(null, last);
+                const range = (max - min) || 1;
+                const bars = last.map((v) => {
+                    const ratio = type === 'count' ? (v / (max || 1)) : (v - min) / range;
+                    const h = Math.max(12, Math.min(100, Math.round(ratio * 100)));
+                    return '<i style="height:' + h + '%"></i>';
+                }).join('');
+                return '<div class="metric-spark">' + bars + '</div>';
+            }
+
+            const cards = keys.map((key) => {
+                const meta = config[key] || {};
+                const s = stats[key] || {};
+                const label = esc(meta.label || key);
+                const unit = esc(meta.unit || '');
+                const count = Number(s.count || 0);
+                if (!count) {
+                    return '<div class="metric-card empty">'
+                        + '<div class="metric-label">' + label + '</div>'
+                        + '<div class="metric-nodata">暂无记录</div>'
+                        + '<div class="metric-hint">和 MOSS 聊聊，让它帮你记下来</div>'
+                        + '</div>';
+                }
+                let valueHtml, subHtml = '';
+                if (s.type === 'number') {
+                    valueHtml = '<div class="metric-value">' + fmt(s.last)
+                        + (unit ? '<span class="metric-unit">' + unit + '</span>' : '') + '</div>';
+                    if (count >= 2) {
+                        const chg = Number(s.change || 0);
+                        const arrow = chg >= 0 ? '▲' : '▼';
+                        subHtml = '<div class="metric-delta ' + (chg >= 0 ? 'up' : 'down') + '">'
+                            + arrow + ' ' + fmt(Math.abs(chg)) + (unit ? ' ' + unit : '') + '</div>';
+                    }
+                } else {
+                    valueHtml = '<div class="metric-value">' + fmt(s.recent_total)
+                        + '<span class="metric-unit">' + (unit || '次') + '</span></div>';
+                    subHtml = '<div class="metric-sub">覆盖 ' + Number(s.active_days || 0)
+                        + ' 天 · 日均 ' + fmt(s.daily_avg) + ' 次</div>';
+                }
+                return '<div class="metric-card">'
+                    + '<div class="metric-label">' + label + '</div>'
+                    + valueHtml + subHtml
+                    + spark(key, s.type === 'number' ? 'number' : 'count')
+                    + '</div>';
+            }).join('');
+
+            return '<div class="metrics-board">'
+                + '<div class="metrics-board-head">'
+                + '<span class="metrics-board-title">📊 数据看板</span>'
+                + '<span class="metrics-board-sub">近 30 天</span>'
+                + '</div>'
+                + '<div class="metrics-grid">' + cards + '</div>'
+                + '</div>';
+        }
+
         function renderReviewView(data) {
             const body = document.getElementById('mobile-review-body');
             const updateBtn = document.getElementById('mobile-review-update-btn');
             if (!body) return;
 
+            // 真实指标统计（后端聚合，近 30 天），看板在三种页面状态顶部都展示
+            const metricsBoard = renderMetricsBoard((data && data.metrics_summary) || null);
+
             // 自 2026-09-25 起不再提供默认 Key：未配置自己的 API Key 时复盘不可用，展示引导空态
             if (!currentUser?.settings?.has_api_key && !currentUser?.is_admin) {
                 updateBtn.style.display = 'none';
-                body.innerHTML = `
+                body.innerHTML = metricsBoard + `
                 <div class="review-empty">
                     <div class="icon">🔑</div>
                     <p>复盘功能需要配置你自己的 API Key 才能使用。<br>自 2026 年 9 月 25 日起，本应用不再提供默认的免费 AI Key，请前往阿里云百炼（bailian.console.aliyun.com）申请你自己的 API Key，填入「我的」→「高级设置」→「API Key」后即可正常生成复盘。</p>
@@ -3984,7 +4194,7 @@
             // 空态：后后台还没有 review.md
             if (!data || !data.exists) {
                 updateBtn.style.display = 'none';
-                body.innerHTML = `
+                body.innerHTML = metricsBoard + `
                 <div class="review-empty">
                     <div class="icon">🪞</div>
                     <p>还没有生成复盘。<br>MOSS 会基于你的所有日记，为你生成一份包含人物画像、回忆高光、洞察的复盘报告。</p>
@@ -4045,7 +4255,7 @@
             // 如果三段均为空，回退为原始文本
             const allEmpty = !charBody && !highlightBody && !insightBody;
             if (allEmpty && data.content) {
-                body.innerHTML = `
+                body.innerHTML = metricsBoard + `
                 ${tip ? `<p class="review-tip">${escapeHtml(tip)}</p>` : ''}
                 <div class="review-card character">
                     <div class="review-card-body">${renderReviewSection(data.content)}</div>
@@ -4053,7 +4263,7 @@
                 return;
             }
 
-            body.innerHTML = `
+            body.innerHTML = metricsBoard + `
             ${tip ? `<p class="review-tip">${escapeHtml(tip)}</p>` : ''}
             <div class="review-card character">
                 <div class="review-card-title">👤 人物画像</div>
