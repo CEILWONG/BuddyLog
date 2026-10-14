@@ -9,11 +9,7 @@ from src.utils.file_utils import (
     append_to_draft,
     auto_archive_expired_drafts,
     extract_agent_persona,
-    extract_profile_without_persona,
-    get_pending_metrics,
-    record_metrics,
-    apply_metrics_actions,
-    mark_metrics_asked,
+    extract_profile_without_persona
 )
 from src.utils.user_utils import extract_usage_tokens, update_user_usage
 from src.utils.llm_utils import resolve_llm, describe_llm_error
@@ -52,9 +48,6 @@ class ChatService:
         weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
         weekday = weekdays[now.weekday()]
         date_str = now.strftime('%Y-%m-%d')
-
-        # 今日数据追踪（易变内容，紧随系统状态后置，保持缓存友好）
-        metrics_section = self._build_metrics_prompt_section(get_pending_metrics(user_email), date_str)
 
         # 系统状态放在 prompt 末尾（易变内容后置），保证固定部分作为稳定前缀命中缓存
         system_prompt = f"""{persona if persona else '你是 Moss,一个陪用户聊每天日常的老朋友。'}
@@ -129,14 +122,12 @@ class ChatService:
    - 或者直接说"我记得你提过溃疡的事，但具体细节我记不清了"
 
 【输出格式 - 严格遵守】
-1. 必须且只能返回 JSON 格式：{{"reply": "你的回复内容", "metrics": {{"m_0": 65.5}}, "metrics_actions": [{{"action": "ask", "key": "m_1"}}]}}
-2. metrics 仅在用户本轮明确给出可量化数据时填写，数值必须来自用户表述，key 必须使用【今日数据追踪】中的 m_xx 标识；无内容时写 null 或省略
-3. metrics_actions 仅在发生提问(ask)/拒绝(decline)/新增(add)/移除(remove)行为时填写；无内容时写 null 或省略
-4. 不要添加 Markdown 代码块标记（如 ```json）
-5. 不要添加任何前缀或后缀文字
-6. 不要添加系统状态信息
-7. 违规示例 ❌：```json{{"reply": "你好"}}``` 或 系统时间同步至...{{"reply": "你好"}}
-8. 正确示例 ✅：{{"reply": "记下了，今天运动了 30 分钟！", "metrics": {{"m_1": 1}}, "metrics_actions": null}}
+1. 必须且只能返回 JSON 格式：{{"reply": "你的回复内容"}}
+2. 不要添加 Markdown 代码块标记（如 ```json）
+3. 不要添加任何前缀或后缀文字
+4. 不要添加系统状态信息
+5. 违规示例 ❌：```json{{"reply": "你好"}}``` 或 系统时间同步至...{{"reply": "你好"}}
+6. 正确示例 ✅：{{"reply": "你好"}}
 
 【绝对禁止 - 违者重罚】
 - 禁止编造任何数字：包括但不限于"间隔X秒"、"频率X%"、"持续X分钟"、"下降X%"、"约X个月"等所有无法验证的精确数据
@@ -149,40 +140,9 @@ class ChatService:
 - 如果不确定具体细节，直接说"我记得你提过这件事，但具体细节我记不清了"，绝不编造
 
 【系统状态】
-当前日期：{date_str} {weekday}
-
-{metrics_section}"""
+当前日期：{date_str} {weekday}"""
 
         return system_prompt
-
-    def _build_metrics_prompt_section(self, pending_view: dict, date_str: str) -> str:
-        """构建【今日数据追踪】prompt 段：待问列表 + 询问/管理规则
-
-        说明：指标 key（m_xx）由后端生成，MOSS 直接复用，严禁自造 key。
-        """
-        pending = pending_view.get("pending") or []
-        recorded = pending_view.get("recorded") or {}
-        cooldown = pending_view.get("cooldown") or []
-
-        pending_text = "、".join(
-            f"{p['key']} {p['label']}({p['unit'] or '数值'})" for p in pending
-        ) or "无（今日已记录完毕，无需询问）"
-        recorded_text = "、".join(f"{k}={v}" for k, v in recorded.items()) or "无"
-        cooldown_text = "、".join(f"{c['key']} {c['label']}" for c in cooldown) or "无"
-
-        return f"""【今日数据追踪】
-本应用会替你记录你在意的生活数据（如体重、运动），复盘时生成真实趋势统计。今天是 {date_str}。
-- 今日待记录：{pending_text}
-- 今日已记录：{recorded_text}
-- 冷却中（暂不询问）：{cooldown_text}
-管理规则（必须遵守）：
-1. 每天首次对话时，最多自然地询问 1 项「今日待记录」指标；语气像闲聊（如"今天运动了吗？"），不要像填报表。
-2. 其余时间仅当用户自己聊到相关话题时顺带多问一项；切勿连续追问同一项。
-3. 用户说明暂时无法记录（没设备/出差/太忙等）时，在返回 JSON 的 metrics_actions 中标 {{"action": "decline", "key": "m_xx"}}，之后几天不再询问该项。
-4. 用户给出数据后，把数值填入返回 JSON 的 metrics 字段（key 必须严格使用上面的 m_xx 标识），并在回复中自然确认已记下。
-5. 用户明确同意新增追踪指标时，在 metrics_actions 中标 {{"action": "add", "label": "睡眠时长", "type": "number", "unit": "小时"}}；type 只能是 number 或 count。最多 6 个指标，已满则引导先删除旧的。用户明确说不再记录某指标时，标 {{"action": "remove", "key": "m_xx"}}。
-6. 若用户尚无想追踪的指标，当用户聊到健康/饮食/作息/运动等相关话题时，可自然提议"这个要不要我帮你记下来，复盘时给你看趋势？"；经用户明确同意后才可 add，严禁未经确认自动创建。
-7. 严禁编造 metrics 数据，所有数值必须来自用户本轮或历史明确表述。"""
     
     def generate_response(self, content: str, history: list, user_email: str = None) -> Dict[str, Any]:
         """生成聊天响应"""
@@ -259,11 +219,6 @@ class ChatService:
                     # 完全无法解析，将清理后的内容作为 reply
                     result = {"reply": content}
         
-        # 提取 MOSS 夹带的指标数据与动作（不随 reply 展示给前端）
-        if isinstance(result, dict):
-            result["metrics_payload"] = result.pop("metrics", None) or {}
-            result["metrics_actions_payload"] = result.pop("metrics_actions", None) or []
-
         # 获取 token 使用量
         usage = response.usage
         if usage:
@@ -298,24 +253,7 @@ class ChatService:
         time_str = now.strftime('%H:00')
         
         recent_text = '\n'.join(recent_diaries[:3]) if recent_diaries else '暂无近期的日记记录'
-
-        # 今日待记录指标：问候时可自然问起，无待记录时不出现该段
-        pending_view = get_pending_metrics(user_email)
-        pending_prompt = ""
-        if pending_view.get("has_pending"):
-            pending_items = "、".join(
-                f"{item['label']}" + (f"（{item.get('unit')}）" if item.get('unit') else "")
-                for item in pending_view["pending"]
-            )
-            pending_prompt = f"""
-【今日待记录的数据】
-{len(pending_view['pending'])} 项还没记录：{pending_items}
-
-【数据提醒要求】
-- 最多自然地问其中 1 项（挑最容易记的），像朋友随口一问，不要做成报表式盘问
-- 若记忆或近期日记暗示用户今天不方便记录，就不要问
-- 今日已记录的数据无需再提"""
-
+        
         greeting_prompt = f"""【任务】生成一句开场白
 
 当前时间：{date_str} {weekday} {time_str}
@@ -325,7 +263,6 @@ class ChatService:
 
 【近期日记】
 {recent_text}
-{pending_prompt}
 
 【要求】
 请生成一个开场白，要求：
@@ -363,13 +300,6 @@ class ChatService:
                 reply = reply.split('\n', 1)[-1] if '\n' in reply else reply[3:]
             if reply.endswith('```'):
                 reply = reply[:-3]
-            # 开场白已把待记录指标问过一遍：标记今日已问，避免主对话链路重复追问
-            if pending_view.get("has_pending"):
-                for item in pending_view["pending"]:
-                    try:
-                        mark_metrics_asked(user_email, item["key"])
-                    except Exception:
-                        pass
             return reply.strip()
         except Exception as e:
             print(f"生成开场白失败: {describe_llm_error(e, ctx)}")
@@ -415,17 +345,6 @@ class ChatService:
         result = self.generate_response(content, history, user_email)
         
         reply_text = result.get("reply", "")
-        
-        # 2.5 写入 MOSS 夹带的指标数据与动作（A通道，实时落盘，失败不阻塞主流程）
-        try:
-            metrics_data = result.get("metrics_payload") or {}
-            actions_data = result.get("metrics_actions_payload") or []
-            if metrics_data:
-                record_metrics(user_email, metrics_data)
-            if actions_data:
-                apply_metrics_actions(user_email, actions_data)
-        except Exception as e:
-            print(f"[Metrics] write failed for user {user_email}: {e}")
         
         # 3. 追加到今天的草稿文件
         filename = append_to_draft(content, reply_text, user_email)
