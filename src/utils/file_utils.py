@@ -231,26 +231,67 @@ def scan_recent_user_activity(limit: int = 20):
     return results[:limit]
 
 
-def append_to_draft(user_msg, assistant_reply, user_email: Optional[str] = None):
-    """追加内容到今天的草稿文件"""
+def append_to_draft(user_msg, assistant_reply, user_email: Optional[str] = None, is_article: bool = False):
+    """追加内容到今天的草稿文件（is_article 时用户消息带（文章）标记）"""
     diaries_dir = _get_diaries_dir(user_email)
     today = datetime.date.today().isoformat()
     draft_path = os.path.join(diaries_dir, f"diary_{today}_draft.md")
-    
+
     # 确保目录存在
     os.makedirs(diaries_dir, exist_ok=True)
-    
+
     # 如果草稿不存在，创建初始结构
     if not os.path.exists(draft_path):
         with open(draft_path, "w", encoding="utf-8") as f:
             f.write(f"# 日记 - {today}\n## 对话记录\n")
-    
+
     now = datetime.datetime.now().strftime('%H:%M:%S')
+    user_label = "用户（文章）" if is_article else "用户"
     with open(draft_path, "a", encoding="utf-8") as f:
-        f.write(f"\n**[{now}] 用户**: {user_msg}\n\n")
+        f.write(f"\n**[{now}] {user_label}**: {user_msg}\n\n")
         f.write(f"**[{now}] Buddy**: {assistant_reply}\n\n")
-    
+
     return os.path.basename(draft_path)
+
+
+# ==================== 文章草稿（单槽位） ====================
+# 每用户同一时间只有一篇未发送的文章草稿，发送或删除后清空；
+# 存放在 diaries 目录下但不属于日记文件，档案列表与归档流程需排除。
+
+ARTICLE_DRAFT_FILENAME = "article_draft.md"
+
+
+def get_article_draft_path(user_email: Optional[str] = None) -> str:
+    """获取文章草稿文件路径"""
+    return os.path.join(_get_diaries_dir(user_email), ARTICLE_DRAFT_FILENAME)
+
+
+def load_article_draft(user_email: Optional[str] = None) -> str:
+    """读取文章草稿内容（不存在返回空字符串）"""
+    path = get_article_draft_path(user_email)
+    if not os.path.exists(path):
+        return ""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        print(f"Error loading article draft: {e}")
+        return ""
+
+
+def save_article_draft(content: str, user_email: Optional[str] = None):
+    """保存文章草稿（覆盖写）"""
+    path = get_article_draft_path(user_email)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content or "")
+
+
+def delete_article_draft(user_email: Optional[str] = None):
+    """删除文章草稿（不存在则忽略）"""
+    path = get_article_draft_path(user_email)
+    if os.path.exists(path):
+        os.remove(path)
 
 
 def _get_next_diary_index(date_str: str, user_email: Optional[str] = None) -> int:
@@ -277,11 +318,14 @@ def _write_diary_file(filepath: str, date_str: str, idx: int, structured_data: d
             # 保留时间戳（如果有）
             time_str = msg.get("time", "")
             if msg["role"] == "user":
+                # 文章消息带（文章）标记，与聊天消息区分
+                label = f"{role}（文章）" if msg.get("is_article") else role
+                emoji = "📝" if msg.get("is_article") else "🙋"
                 # 用户内容：引用块 + emoji + 加粗，更醒目
                 if time_str:
-                    f.write(f"> 🙋 **[{time_str}] {role}**: **{msg['content']}**\n\n")
+                    f.write(f"> {emoji} **[{time_str}] {label}**: **{msg['content']}**\n\n")
                 else:
-                    f.write(f"> 🙋 **{role}**: **{msg['content']}**\n\n")
+                    f.write(f"> {emoji} **{label}**: **{msg['content']}**\n\n")
             else:
                 # Buddy内容：emoji + 普通格式
                 if time_str:
@@ -394,28 +438,42 @@ def _parse_draft_date(filename: str):
 
 
 def _extract_conversation_from_draft(content: str) -> list:
-    """从草稿内容提取对话记录（保留时间戳）"""
+    """从草稿内容提取对话记录（保留时间戳，用户消息带 is_article 文章标记）"""
     conversation = []
     user_msg = None
     user_time = None
+    user_is_article = False
     buddy_lines = []
     buddy_time = None
-    
+
     lines = content.split('\n')
     i = 0
     while i < len(lines):
         line = lines[i]
-        user_match = re.search(r'\*\*\[(\d{2}:\d{2}:\d{2})\] 用户\*\*: (.+)', line)
+        user_match = re.search(r'\*\*\[(\d{2}:\d{2}:\d{2})\] 用户(（文章）)?\*\*: (.+)', line)
         buddy_match = re.search(r'\*\*\[(\d{2}:\d{2}:\d{2})\] Buddy\*\*: (.+)', line)
-        
+
         if user_match:
             # 如果之前有未完成的对话，先保存
             if user_msg and buddy_lines:
-                conversation.append({"role": "user", "content": user_msg, "time": user_time})
+                conversation.append({"role": "user", "content": user_msg, "time": user_time,
+                                     "is_article": user_is_article})
                 conversation.append({"role": "assistant", "content": '\n'.join(buddy_lines), "time": buddy_time})
             # 开始新的对话轮次
             user_time = user_match.group(1)
-            user_msg = user_match.group(2)
+            user_is_article = bool(user_match.group(2))
+            user_msg = user_match.group(3)
+            # 收集用户消息的续行（多行消息/文章正文），直到遇到下一条消息标记行
+            # 注意：文章正文可含空行（段落分隔），不能按空行截断；结尾的空白在 rstrip 时去掉
+            j = i + 1
+            while j < len(lines):
+                nxt = lines[j]
+                if re.search(r'\*\*\[\d{2}:\d{2}:\d{2}\] (用户|Buddy)(（文章）)?\*\*:', nxt):
+                    break
+                user_msg += '\n' + nxt
+                j += 1
+            user_msg = user_msg.rstrip()
+            i = j - 1  # 回退到停止行，让外层循环处理该标记行
             buddy_lines = []
             buddy_time = None
         elif buddy_match and user_msg:
@@ -427,7 +485,7 @@ def _extract_conversation_from_draft(content: str) -> list:
             while i < len(lines):
                 next_line = lines[i]
                 # 如果遇到下一个用户消息或Buddy消息，停止收集
-                if re.search(r'\*\*\[\d{2}:\d{2}:\d{2}\] (用户|Buddy)\*\*:', next_line):
+                if re.search(r'\*\*\[\d{2}:\d{2}:\d{2}\] (用户|Buddy)(（文章）)?\*\*:', next_line):
                     i -= 1  # 回退一行，让外层循环处理
                     break
                 # 收集非空行
@@ -435,15 +493,17 @@ def _extract_conversation_from_draft(content: str) -> list:
                     buddy_lines.append(next_line)
                 i += 1
             # 保存当前对话轮次
-            conversation.append({"role": "user", "content": user_msg, "time": user_time})
+            conversation.append({"role": "user", "content": user_msg, "time": user_time,
+                                 "is_article": user_is_article})
             conversation.append({"role": "assistant", "content": '\n'.join(buddy_lines), "time": buddy_time})
             # 重置状态
             user_msg = None
             user_time = None
+            user_is_article = False
             buddy_lines = []
             buddy_time = None
         i += 1
-    
+
     return conversation
 
 
@@ -506,10 +566,11 @@ def list_diary_files(user_email: Optional[str] = None):
         if os.path.exists(sys_path):
             files.append(sys_file)
     
-    # 添加日记文件
+    # 添加日记文件（排除文章草稿，它不属于日记档案）
     diaries_dir = _get_diaries_dir(user_email)
     if os.path.exists(diaries_dir):
-        diary_files = [f for f in os.listdir(diaries_dir) if f.endswith('.md')]
+        diary_files = [f for f in os.listdir(diaries_dir)
+                       if f.endswith('.md') and f != ARTICLE_DRAFT_FILENAME]
         files.extend(diary_files)
     
     return sorted(files, reverse=True)

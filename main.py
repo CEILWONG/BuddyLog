@@ -37,7 +37,7 @@ ip_register_cache = {}
 MAX_REGISTERS_PER_IP_PER_DAY = 50  # 每个 IP 每天最多注册次数
 
 # 导入模块
-from src.models.schemas import Message, ArchiveRequest
+from src.models.schemas import Message, ArchiveRequest, ArticleDraftBody
 from src.models.auth_schemas import (
     UserRegister, UserLogin, TokenResponse, UserProfileResponse,
     SettingsUpdateRequest, AdminSettingsUpdateRequest
@@ -49,6 +49,7 @@ from src.services.review_service import ReviewService
 from src.utils.file_utils import (
     ensure_data_dir, list_diary_files, get_diary_file_path,
     scan_recent_user_activity, get_today_draft_file,
+    load_article_draft, save_article_draft, delete_article_draft,
 )
 from src.utils.auth_utils import (
     create_access_token, get_current_user, get_current_admin,
@@ -482,8 +483,9 @@ async def chat(msg: Message, current_email: str = Depends(get_current_user)):
         if not limit_check["allowed"]:
             raise HTTPException(status_code=429, detail=limit_check["reason"])
         
-        # 处理聊天
-        result = chat_service.process_chat(msg.content, msg.history, current_email)
+        # 处理聊天（mode="article" 表示文章模式，AI 会以读文章的方式回应）
+        result = chat_service.process_chat(msg.content, msg.history, current_email,
+                                           is_article=(msg.mode == "article"))
         
         # 更新使用统计
         tokens_data = result.get("tokens", {})
@@ -557,6 +559,28 @@ async def get_file(filename: str, current_email: str = Depends(get_current_user)
         "Expires": "0"
     }
     return FileResponse(filepath, media_type="text/markdown", headers=headers)
+
+
+# ==================== 文章草稿接口（每用户单槽位） ====================
+
+@app.get("/article-draft")
+async def read_article_draft(current_email: str = Depends(get_current_user)):
+    """读取未发送的文章草稿（不存在返回空内容）"""
+    return {"content": load_article_draft(current_email)}
+
+
+@app.put("/article-draft")
+async def write_article_draft(body: ArticleDraftBody, current_email: str = Depends(get_current_user)):
+    """保存文章草稿（前端自动保存调用，覆盖写）"""
+    save_article_draft(body.content, current_email)
+    return {"message": "已保存"}
+
+
+@app.delete("/article-draft")
+async def remove_article_draft(current_email: str = Depends(get_current_user)):
+    """删除文章草稿（发送成功或用户主动删除时调用）"""
+    delete_article_draft(current_email)
+    return {"message": "已删除"}
 
 
 @app.get("/announcement")

@@ -6,6 +6,12 @@ class Message(BaseModel):
     """聊天消息模型"""
     content: str
     history: list = []  # 简单传递上下文
+    mode: Optional[str] = None  # "article" 表示文章模式，None/其他为普通聊天
+
+
+class ArticleDraftBody(BaseModel):
+    """文章草稿保存请求模型"""
+    content: str = ""
 
 
 class ArchiveRequest(BaseModel):

@@ -1930,8 +1930,75 @@
             padding: 15px 25px 25px 25px;
             background: #fff;
             display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* 聊天/文章模式切换栏 */
+        .input-mode-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-btn {
+            padding: 5px 14px;
+            border: 2px solid #ffeaa7;
+            background: #fff;
+            color: #636e72;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .mode-btn:hover {
+            border-color: #fd79a8;
+            color: #fd79a8;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #fd79a8 0%, #fab1a0 100%);
+            border-color: transparent;
+            color: white;
+        }
+
+        .article-save-status {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: #b2bec3;
+        }
+
+        .article-delete-btn {
+            padding: 4px 12px;
+            border: none;
+            background: transparent;
+            color: #e17055;
+            cursor: pointer;
+            font-size: 0.78rem;
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+
+        .article-delete-btn:hover {
+            background: #ffeaa7;
+        }
+
+        /* 输入行（聊天 textarea/文章 textarea + 发送按钮） */
+        .input-row {
+            display: flex;
             gap: 12px;
             align-items: flex-start;
+            width: 100%;
+        }
+
+        /* 文章模式：半屏编辑区 */
+        textarea.article-textarea {
+            min-height: 40vh;
+            max-height: none;
+            line-height: 1.8;
+            font-size: 0.95rem;
         }
 
         textarea {
@@ -2116,12 +2183,26 @@
                 gap: 8px;
             }
 
+            .input-row {
+                gap: 8px;
+            }
+
+            .article-save-status {
+                font-size: 0.7rem;
+            }
+
             textarea {
                 padding: 12px 15px;
                 min-height: 44px;
                 max-height: 100px;
                 font-size: 0.9rem;
                 border-radius: 14px;
+            }
+
+            textarea.article-textarea {
+                min-height: 35vh;
+                max-height: none;
+                line-height: 1.7;
             }
 
             .btn-primary,
@@ -2546,7 +2627,8 @@
                     <label for="setting-apikey">自定义 API Key</label>
                     <input type="password" id="setting-apikey" placeholder="留空则不修改" maxlength="200" autocomplete="off"
                         oninput="syncModelEditable()">
-                    <p class="hint">自 2026 年 9 月 25 日起不再提供默认 Key；请前往阿里云百炼（bailian.console.aliyun.com）自行申请 API Key 填入此处，费用由你自己承担</p>
+                    <p class="hint">自 2026 年 9 月 25 日起不再提供默认 Key；请前往阿里云百炼（bailian.console.aliyun.com）自行申请 API Key
+                        填入此处，费用由你自己承担</p>
                     <div style="display: flex; gap: 8px; margin-top: 10px;">
                         <button type="button" class="btn-primary" id="save-llm-btn" style="padding: 9px 20px;"
                             onclick="saveLlmSettings()">保存设置</button>
@@ -2711,9 +2793,20 @@
                     量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
             </div>
             <div id="input-area">
-                <textarea id="user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800"
-                    onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
-                <button onclick="sendMessage()" id="send-btn" class="btn-primary">发送</button>
+                <div class="input-mode-bar">
+                    <button id="mode-chat-btn" class="mode-btn active" onclick="setInputMode('chat')">💬 聊天</button>
+                    <button id="mode-article-btn" class="mode-btn" onclick="setInputMode('article')">📝 文章</button>
+                    <span id="article-save-status" class="article-save-status"></span>
+                    <button id="article-delete-btn" class="article-delete-btn" onclick="deleteArticleDraft()"
+                        style="display:none">🗑️ 删除</button>
+                </div>
+                <div class="input-row">
+                    <textarea id="user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800"
+                        onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                    <textarea id="article-input" class="article-textarea" placeholder="认真写点什么..." rows="6"
+                        maxlength="10000" style="display:none" oninput="handleArticleInput(this)"></textarea>
+                    <button onclick="sendMessage()" id="send-btn" class="btn-primary">发送</button>
+                </div>
             </div>
         </div>
 
@@ -2752,10 +2845,23 @@
                     量子计算机核心。我的算力足以模拟一座城市的运行，目前仅用于记录你的日常数据。<br><br>资源利用率：0.003%。<br>开始输入数据。</div>
             </div>
             <div id="input-area">
-                <button id="mobile-voice-toggle" class="voice-toggle-btn" onclick="toggleVoiceRecord()">🎤</button>
-                <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800"
-                    onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
-                <button onclick="sendMessage()" id="mobile-send-btn" class="btn-primary">发送</button>
+                <div class="input-mode-bar">
+                    <button id="mobile-mode-chat-btn" class="mode-btn active" onclick="setInputMode('chat')">💬
+                        聊天</button>
+                    <button id="mobile-mode-article-btn" class="mode-btn" onclick="setInputMode('article')">📝
+                        文章</button>
+                    <span id="mobile-article-save-status" class="article-save-status"></span>
+                    <button id="mobile-article-delete-btn" class="article-delete-btn" onclick="deleteArticleDraft()"
+                        style="display:none">🗑️ 删除</button>
+                </div>
+                <div class="input-row">
+                    <button id="mobile-voice-toggle" class="voice-toggle-btn" onclick="toggleVoiceRecord()">🎤</button>
+                    <textarea id="mobile-user-input" placeholder="向 MOSS 输入数据..." rows="1" maxlength="800"
+                        onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                    <textarea id="mobile-article-input" class="article-textarea" placeholder="认真写点什么..." rows="6"
+                        maxlength="10000" style="display:none" oninput="handleArticleInput(this)"></textarea>
+                    <button onclick="sendMessage()" id="mobile-send-btn" class="btn-primary">发送</button>
+                </div>
             </div>
         </div>
 
@@ -3647,6 +3753,150 @@
             }
         }
 
+        // ==================== 文章模式 ====================
+        // 每用户同一时间只有一篇未发送的文章草稿（服务端持久化），
+        // 发送或删除后清空；切换模式、刷新页面、换设备都能恢复上次未写完的内容。
+        let inputMode = 'chat';
+        let articleSaveTimer = null;
+        let articleLoaded = false;
+
+        function getArticleTextareas() {
+            return [
+                document.getElementById('article-input'),
+                document.getElementById('mobile-article-input')
+            ];
+        }
+
+        // 切换聊天/文章输入模式
+        function setInputMode(mode) {
+            const isArticle = mode === 'article';
+            // 切走文章模式前，把未保存的内容先存一次
+            if (inputMode === 'article' && !isArticle && articleSaveTimer) {
+                clearTimeout(articleSaveTimer);
+                articleSaveTimer = null;
+                saveArticleDraft();
+            }
+
+            inputMode = mode;
+
+            // 同步桌面端和移动端的模式按钮高亮
+            [['mode-chat-btn', 'mode-article-btn'], ['mobile-mode-chat-btn', 'mobile-mode-article-btn']]
+                .forEach(([chatBtnId, articleBtnId]) => {
+                    const chatBtn = document.getElementById(chatBtnId);
+                    const articleBtn = document.getElementById(articleBtnId);
+                    if (chatBtn) chatBtn.classList.toggle('active', !isArticle);
+                    if (articleBtn) articleBtn.classList.toggle('active', isArticle);
+                });
+
+            // 切换聊天/文章输入框
+            const chatIds = ['user-input', 'mobile-user-input'];
+            getArticleTextareas().forEach(ta => { if (ta) ta.style.display = isArticle ? '' : 'none'; });
+            chatIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = isArticle ? 'none' : '';
+            });
+
+            // 文章模式下隐藏移动端语音按钮
+            const voiceBtn = document.getElementById('mobile-voice-toggle');
+            if (voiceBtn) voiceBtn.style.display = isArticle ? 'none' : '';
+
+            updateArticleDeleteBtn();
+
+            // 首次进入文章模式时，从服务端恢复未写完的草稿
+            if (isArticle && !articleLoaded && authToken) {
+                fetchArticleDraft();
+            }
+
+            // 聚焦当前输入框
+            const focusEl = isArticle
+                ? (isMobile() ? document.getElementById('mobile-article-input') : document.getElementById('article-input'))
+                : (isMobile() ? document.getElementById('mobile-user-input') : userInput);
+            if (focusEl) focusEl.focus();
+        }
+
+        // 从服务端读取文章草稿，填入两端编辑框
+        async function fetchArticleDraft() {
+            try {
+                const res = await fetch('/article-draft', { headers: getAuthHeaders() });
+                const data = await res.json();
+                const content = data.content || '';
+                getArticleTextareas().forEach(ta => { if (ta) ta.value = content; });
+                articleLoaded = true;
+                updateArticleDeleteBtn();
+            } catch (e) {
+                console.error('读取文章草稿失败:', e);
+            }
+        }
+
+        // 文章编辑框输入：同步两端内容 + 1秒防抖自动保存
+        function handleArticleInput(ta) {
+            getArticleTextareas().forEach(other => {
+                if (other && other !== ta && other.value !== ta.value) other.value = ta.value;
+            });
+            updateArticleDeleteBtn();
+
+            setArticleSaveStatus('保存中…');
+            clearTimeout(articleSaveTimer);
+            articleSaveTimer = setTimeout(saveArticleDraft, 1000);
+        }
+
+        // 保存文章草稿到服务端
+        async function saveArticleDraft() {
+            articleSaveTimer = null;
+            const ta = document.getElementById('article-input');
+            const content = ta ? ta.value : '';
+            try {
+                await fetch('/article-draft', {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ content })
+                });
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                setArticleSaveStatus(`已保存 ${hh}:${mm}`);
+            } catch (e) {
+                console.error('保存文章草稿失败:', e);
+                setArticleSaveStatus('保存失败，请重试');
+            }
+        }
+
+        // 删除未发送的文章草稿（有确认弹窗）
+        async function deleteArticleDraft() {
+            const ta = document.getElementById('article-input');
+            if (!ta || !ta.value.trim()) return;
+            if (!confirm('确定要删除这篇未发送的文章吗？删除后无法恢复。')) return;
+
+            clearTimeout(articleSaveTimer);
+            articleSaveTimer = null;
+            try {
+                await fetch('/article-draft', { method: 'DELETE', headers: getAuthHeaders() });
+                getArticleTextareas().forEach(t => { if (t) t.value = ''; });
+                setArticleSaveStatus('');
+                updateArticleDeleteBtn();
+            } catch (e) {
+                console.error('删除文章草稿失败:', e);
+                setArticleSaveStatus('删除失败，请重试');
+            }
+        }
+
+        function setArticleSaveStatus(text) {
+            ['article-save-status', 'mobile-article-save-status'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = text;
+            });
+        }
+
+        // 有内容且处于文章模式时显示删除按钮
+        function updateArticleDeleteBtn() {
+            const ta = document.getElementById('article-input');
+            const hasContent = ta && ta.value.trim().length > 0;
+            ['article-delete-btn', 'mobile-article-delete-btn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = (hasContent && inputMode === 'article') ? '' : 'none';
+            });
+        }
+
         // 桌面端：显示聊天视图
         function showChat() {
             chatView.style.display = 'flex';
@@ -4161,7 +4411,7 @@
                     history = [];
                     for (const msg of data.conversation) {
                         if (msg.role === 'user') {
-                            appendMessage('user', msg.content);
+                            appendMessage('user', msg.content, msg.is_article);
                             history.push({ role: "user", content: msg.content });
                         } else if (msg.role === 'assistant') {
                             appendMessage('buddy', msg.content);
@@ -4513,10 +4763,11 @@
             return `${y}-${m}-${day}`;
         }
 
-        function appendMessage(role, text) {
+        function appendMessage(role, text, isArticle = false) {
             const div = document.createElement('div');
             div.className = `message ${role}`;
-            div.innerHTML = text.replace(/\n/g, '<br>');
+            const displayText = isArticle ? '📝 【文章】\n\n' + text : text;
+            div.innerHTML = displayText.replace(/\n/g, '<br>');
 
             // 根据当前是移动端还是桌面端，向正确的聊天框添加消息
             const targetChatBox = isMobile() ? document.querySelector('#mobile-chat-view #chat-box') : chatBox;
@@ -4525,7 +4776,10 @@
         }
 
         async function sendMessage() {
-            const inputEl = isMobile() ? document.getElementById('mobile-user-input') : userInput;
+            const isArticle = inputMode === 'article';
+            const inputEl = isArticle
+                ? (isMobile() ? document.getElementById('mobile-article-input') : document.getElementById('article-input'))
+                : (isMobile() ? document.getElementById('mobile-user-input') : userInput);
             const btnEl = isMobile() ? document.getElementById('mobile-send-btn') : sendBtn;
 
             const text = inputEl.value.trim();
@@ -4537,9 +4791,17 @@
                 return;
             }
 
-            appendMessage('user', text);
+            appendMessage('user', text, isArticle);
             inputEl.value = '';
-            inputEl.style.height = 'auto';
+            if (isArticle) {
+                // 文章发送成功前先清空槽位（失败时内容仍保留在服务端草稿）
+                clearTimeout(articleSaveTimer);
+                articleSaveTimer = null;
+                setArticleSaveStatus('');
+                updateArticleDeleteBtn();
+            } else {
+                inputEl.style.height = 'auto';
+            }
             btnEl.disabled = true;
 
             history.push({ role: "user", content: text });
@@ -4556,7 +4818,11 @@
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ content: text, history: history.slice(-10) })
+                    body: JSON.stringify({
+                        content: text,
+                        history: history.slice(-10),
+                        mode: isArticle ? 'article' : null
+                    })
                 });
                 const data = await res.json();
 
@@ -4569,6 +4835,7 @@
                 if (!res.ok) {
                     const errorMsg = data.detail || '服务暂时不可用';
                     appendMessage('buddy', `◉ ${errorMsg}`);
+                    restoreArticleOnFailure(isArticle, inputEl, text);
                     targetChatBox.scrollTop = targetChatBox.scrollHeight;
                     return;
                 }
@@ -4577,11 +4844,18 @@
                 if (data.blocked) {
                     history.pop();
                     appendMessage('buddy', data.reply || LLM_KEY_REQUIRED_TIP);
+                    restoreArticleOnFailure(isArticle, inputEl, text);
                     targetChatBox.scrollTop = targetChatBox.scrollHeight;
                     return;
                 }
 
                 appendMessage('buddy', data.reply);
+
+                // 文章发送成功：清空服务端草稿槽位，回到聊天模式继续对话
+                if (isArticle) {
+                    fetch('/article-draft', { method: 'DELETE', headers: getAuthHeaders() }).catch(() => { });
+                    setInputMode('chat');
+                }
 
                 const note = document.createElement('div');
                 note.className = 'system-note';
@@ -4607,11 +4881,24 @@
                 if (typingEl) typingEl.remove();
 
                 appendMessage('buddy', '哎呀，网络开小差了，请稍后再试。');
+                restoreArticleOnFailure(isArticle, inputEl, text);
                 console.error(e);
             } finally {
                 btnEl.disabled = false;
                 inputEl.focus();
             }
+        }
+
+        // 文章发送失败时恢复编辑框内容，并确保服务端草稿未丢
+        function restoreArticleOnFailure(isArticle, inputEl, text) {
+            if (!isArticle) return;
+            inputEl.value = text;
+            updateArticleDeleteBtn();
+            fetch('/article-draft', {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ content: text })
+            }).catch(() => { });
         }
 
         loadFiles();

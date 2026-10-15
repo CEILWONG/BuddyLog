@@ -144,17 +144,27 @@ class ChatService:
 
         return system_prompt
     
-    def generate_response(self, content: str, history: list, user_email: str = None) -> Dict[str, Any]:
-        """生成聊天响应"""
+    # 文章模式下注入到本轮用户消息前的说明（只改本轮 user turn，不动 system prompt，保持 prefix cache 命中）
+    ARTICLE_USER_PREFIX = (
+        "（这条消息不是日常闲聊，而是用户认真写的一篇文章。请先完整读完，理解TA想表达的内容、情绪和思考，"
+        "然后像一位认真读完了老朋友文章的朋友那样回应：保持你们一贯的朋友口吻，但回复要比平时更有深度——"
+        "可以谈文章触动了你什么、你的真实看法和共鸣、值得延伸探讨的点，而不是泛泛地夸奖，也不是给修改建议。"
+        "回复长度与文章的内容量匹配，可以适当更长。）\n\n【文章正文】\n"
+    )
+
+    def generate_response(self, content: str, history: list, user_email: str = None,
+                          is_article: bool = False) -> Dict[str, Any]:
+        """生成聊天响应（is_article=True 时本轮用户消息为文章）"""
         # 构建系统提示
         system_prompt = self.build_system_prompt(user_email)
-        
+
         # 构建消息数组，保留完整对话历史（让MOSS理解上下文逻辑）
         valid_history = [msg for msg in history if msg.get("content")]
+        content_for_llm = f"{self.ARTICLE_USER_PREFIX}{content}" if is_article else content
         messages = [
             {"role": "system", "content": system_prompt},
             *valid_history[-10:],  # 最近10轮对话
-            {"role": "user", "content": content}
+            {"role": "user", "content": content_for_llm}
         ]
         
         # 调用API (OpenAI 格式)
@@ -332,7 +342,8 @@ class ChatService:
                     return True
         return False
     
-    def process_chat(self, content: str, history: list, user_email: str = None) -> Dict[str, Any]:
+    def process_chat(self, content: str, history: list, user_email: str = None,
+                     is_article: bool = False) -> Dict[str, Any]:
         """处理聊天请求（归档改为后台异步执行）"""
         # 1. 检查是否存在过期草稿，并提交归档任务到后台（非阻塞）
         archiving_notice = None
@@ -340,14 +351,14 @@ class ChatService:
             if self._has_expired_drafts(user_email):
                 archiving_notice = "检测到有未归档draft日记，将在后台自动完成归档"
             self._archive_executor.submit(self._background_archive, user_email)
-        
+
         # 2. 立即生成响应（不等待归档完成）
-        result = self.generate_response(content, history, user_email)
-        
+        result = self.generate_response(content, history, user_email, is_article=is_article)
+
         reply_text = result.get("reply", "")
-        
-        # 3. 追加到今天的草稿文件
-        filename = append_to_draft(content, reply_text, user_email)
+
+        # 3. 追加到今天的草稿文件（文章消息带标记，归档后仍可识别）
+        filename = append_to_draft(content, reply_text, user_email, is_article=is_article)
         
         response = {
             "reply": reply_text,
