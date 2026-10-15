@@ -37,7 +37,7 @@ ip_register_cache = {}
 MAX_REGISTERS_PER_IP_PER_DAY = 50  # 每个 IP 每天最多注册次数
 
 # 导入模块
-from src.models.schemas import Message, ArchiveRequest, ArticleDraftBody
+from src.models.schemas import Message, ArchiveRequest, ArticleDraftBody, SubLogProjectCreate, SubLogRecordBody
 from src.models.auth_schemas import (
     UserRegister, UserLogin, TokenResponse, UserProfileResponse,
     SettingsUpdateRequest, AdminSettingsUpdateRequest
@@ -50,6 +50,8 @@ from src.utils.file_utils import (
     ensure_data_dir, list_diary_files, get_diary_file_path,
     scan_recent_user_activity, get_today_draft_file,
     load_article_draft, save_article_draft, delete_article_draft,
+    load_sub_logs, create_sub_log_project, delete_sub_log_project,
+    upsert_sub_log_record, delete_sub_log_record,
 )
 from src.utils.auth_utils import (
     create_access_token, get_current_user, get_current_admin,
@@ -580,6 +582,59 @@ async def write_article_draft(body: ArticleDraftBody, current_email: str = Depen
 async def remove_article_draft(current_email: str = Depends(get_current_user)):
     """删除文章草稿（发送成功或用户主动删除时调用）"""
     delete_article_draft(current_email)
+    return {"message": "已删除"}
+
+
+# ==================== 次记（Sub-log）接口 ====================
+
+@app.get("/sub-logs")
+async def get_sub_logs(current_email: str = Depends(get_current_user)):
+    """获取用户全部次记项目及记录"""
+    return load_sub_logs(current_email)
+
+
+@app.post("/sub-logs/projects")
+async def add_sub_log_project(body: SubLogProjectCreate,
+                              current_email: str = Depends(get_current_user)):
+    """新建次记项目"""
+    try:
+        project = create_sub_log_project(
+            name=body.name, ptype=body.type, unit=body.unit,
+            chart_type=body.chart_type, user_email=current_email
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return project
+
+
+@app.delete("/sub-logs/projects/{project_id}")
+async def remove_sub_log_project(project_id: str,
+                                 current_email: str = Depends(get_current_user)):
+    """删除次记项目及其记录"""
+    ok = delete_sub_log_project(project_id, current_email)
+    if not ok:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    return {"message": "已删除"}
+
+
+@app.put("/sub-logs/projects/{project_id}/records/{date_str}")
+async def put_sub_log_record(project_id: str, date_str: str,
+                             body: SubLogRecordBody,
+                             current_email: str = Depends(get_current_user)):
+    """写入/更新某日记录"""
+    ok = upsert_sub_log_record(project_id, date_str, body.value, current_email)
+    if not ok:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    return {"message": "已保存"}
+
+
+@app.delete("/sub-logs/projects/{project_id}/records/{date_str}")
+async def del_sub_log_record(project_id: str, date_str: str,
+                             current_email: str = Depends(get_current_user)):
+    """删除某日记录"""
+    ok = delete_sub_log_record(project_id, date_str, current_email)
+    if not ok:
+        raise HTTPException(status_code=404, detail="记录不存在")
     return {"message": "已删除"}
 
 

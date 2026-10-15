@@ -2549,6 +2549,307 @@
                 flex-wrap: wrap;
             }
         }
+
+        /* ==================== 次记（Sub-log）样式 ==================== */
+        #mobile-sublog-view {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            background: #fff;
+            overflow-y: auto;
+        }
+
+        #mobile-sublog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 10;
+        }
+
+        #mobile-sublog-header h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        #sublog-project-list {
+            padding: 16px;
+        }
+
+        .sublog-project-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sublog-project-card:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .sublog-project-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .sublog-project-meta {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+
+        .sublog-project-latest {
+            font-size: 14px;
+            color: #495057;
+        }
+
+        /* 卡片头部：名称 + 最新值同行 */
+        .sublog-project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .sublog-project-header .sublog-project-name {
+            margin-bottom: 0;
+        }
+
+        /* 首页内嵌图表 */
+        .sublog-card-chart {
+            margin: 10px 0 4px;
+        }
+
+        /* 内嵌热力图去掉外层卡片式背景，格子略缩小以适配窄屏 */
+        .sublog-card-chart .archive-heatmap {
+            margin-bottom: 0;
+            padding: 0;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .sublog-card-chart .heatmap-cell {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        /* 弹窗通用样式 */
+        #sublog-create-modal {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-mask {
+            position: absolute;
+            inset: 0;
+        }
+
+        .modal-box {
+            position: relative;
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-box h3 {
+            margin: 0 0 16px 0;
+            font-size: 18px;
+        }
+
+        .form-row {
+            margin-bottom: 16px;
+        }
+
+        .form-row label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-row input[type="text"],
+        .form-row input[type="number"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 16px;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn-primary,
+        .btn-cancel,
+        .btn-danger,
+        .btn-back {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #4a90d9;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #357abd;
+        }
+
+        .btn-cancel {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-cancel:hover {
+            background: #dee2e6;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-back {
+            background: transparent;
+            color: #4a90d9;
+            padding: 6px 12px;
+        }
+
+        /* 详情页 */
+        #sublog-detail-view {
+            padding: 16px;
+        }
+
+        #sublog-detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        #sublog-detail-header h2 {
+            margin: 0;
+            font-size: 18px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .sublog-card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .sublog-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .sublog-input-row input[type="date"],
+        .sublog-input-row input[type="number"] {
+            flex: 1;
+            min-width: 100px;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .sublog-hint {
+            margin: 8px 0 0 0;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        #sublog-chart {
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sublog-empty {
+            color: #6c757d;
+            font-size: 14px;
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .sublog-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .sublog-stat-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .sublog-stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+
+        .sublog-stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #212529;
+        }
     </style>
 </head>
 
@@ -2887,6 +3188,102 @@
                 <div class="review-loading">加载中</div>
             </div>
         </div>
+
+        <!-- 移动端次记视图 -->
+        <div id="mobile-sublog-view">
+            <!-- 列表页 -->
+            <div id="sublog-list-view">
+                <div id="mobile-sublog-header">
+                    <h2>📊 次记</h2>
+                    <button class="btn-primary" onclick="openSubLogCreate()">＋ 新建</button>
+                </div>
+                <div id="sublog-project-list">
+                    <div class="empty-state">加载中...</div>
+                </div>
+            </div>
+
+            <!-- 新建项目弹窗 -->
+            <div id="sublog-create-modal" style="display:none">
+                <div class="modal-mask" onclick="closeSubLogCreate()"></div>
+                <div class="modal-box">
+                    <h3>新建记录项目</h3>
+                    <div class="form-row">
+                        <label>项目名称</label>
+                        <input type="text" id="sublog-new-name" placeholder="如：体重、跑步、喝饮料" maxlength="20">
+                    </div>
+                    <div class="form-row">
+                        <label>记录方式</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="sublog-new-type" value="numeric" checked
+                                    onchange="onSubLogTypeChange()"> 数值</label>
+                            <label><input type="radio" name="sublog-new-type" value="boolean"
+                                    onchange="onSubLogTypeChange()"> 是/否</label>
+                        </div>
+                    </div>
+                    <div class="form-row" id="sublog-new-unit-row">
+                        <label>单位</label>
+                        <input type="text" id="sublog-new-unit" placeholder="如：kg、km、次" maxlength="10">
+                    </div>
+                    <div class="form-row">
+                        <label>展示图表</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="sublog-new-chart" value="line" checked> 折线图</label>
+                            <label><input type="radio" name="sublog-new-chart" value="heatmap"> 热力图</label>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-cancel" onclick="closeSubLogCreate()">取消</button>
+                        <button class="btn-primary" onclick="submitSubLogCreate()">创建</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 详情页 -->
+            <div id="sublog-detail-view" style="display:none">
+                <div id="sublog-detail-header">
+                    <button class="btn-back" onclick="showSubLogList()">← 返回</button>
+                    <h2 id="sublog-detail-title">项目</h2>
+                    <button class="btn-danger" onclick="deleteCurrentSubLogProject()">删除</button>
+                </div>
+
+                <!-- 记录输入区 -->
+                <div id="sublog-record-input" class="sublog-card">
+                    <div class="sublog-input-row">
+                        <input type="date" id="sublog-record-date">
+                        <input type="number" id="sublog-record-value" placeholder="数值" step="0.01">
+                        <button class="btn-primary" onclick="submitSubLogRecord()">记录</button>
+                    </div>
+                    <p id="sublog-record-hint" class="sublog-hint"></p>
+                </div>
+
+                <!-- 图表区 -->
+                <div id="sublog-chart-area" class="sublog-card">
+                    <div id="sublog-chart"></div>
+                </div>
+
+                <!-- 汇总统计 -->
+                <div id="sublog-stats-area" class="sublog-card">
+                    <div class="sublog-stat-grid">
+                        <div class="sublog-stat-item">
+                            <div class="sublog-stat-label">总记录</div>
+                            <div class="sublog-stat-value" id="sublog-stat-count">0</div>
+                        </div>
+                        <div class="sublog-stat-item">
+                            <div class="sublog-stat-label">最新值</div>
+                            <div class="sublog-stat-value" id="sublog-stat-latest">-</div>
+                        </div>
+                        <div class="sublog-stat-item">
+                            <div class="sublog-stat-label">最高</div>
+                            <div class="sublog-stat-value" id="sublog-stat-max">-</div>
+                        </div>
+                        <div class="sublog-stat-item">
+                            <div class="sublog-stat-label">最低</div>
+                            <div class="sublog-stat-value" id="sublog-stat-min">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 移动端用户菜单弹窗 -->
@@ -2967,6 +3364,10 @@
             <span>🪞</span>
             <span>复盘</span>
         </button>
+        <button class="nav-btn" onclick="showMobileSubLog()" id="mobile-nav-sublog">
+            <span>📊</span>
+            <span>次记</span>
+        </button>
     </div>
 
     <!-- 移动端阅读视图（全屏） -->
@@ -3011,10 +3412,12 @@
         const mobileChatView = document.getElementById('mobile-chat-view');
         const mobileArchiveView = document.getElementById('mobile-archive-view');
         const mobileReviewView = document.getElementById('mobile-review-view');
+        const mobileSubLogView = document.getElementById('mobile-sublog-view');
         const mobileReaderView = document.getElementById('mobile-reader-view');
         const mobileNavChat = document.getElementById('mobile-nav-chat');
         const mobileNavArchive = document.getElementById('mobile-nav-archive');
         const mobileNavReview = document.getElementById('mobile-nav-review');
+        const mobileNavSubLog = document.getElementById('mobile-nav-sublog');
         const mobileUserModal = document.getElementById('mobile-user-modal');
 
         // 自 2026-09-25 起不再提供默认 Key：提示文案与后端 /chat 返回保持逐字一致
@@ -3929,9 +4332,11 @@
             mobileChatView.style.display = 'flex';
             mobileArchiveView.style.display = 'none';
             if (mobileReviewView) mobileReviewView.style.display = 'none';
+            if (mobileSubLogView) mobileSubLogView.style.display = 'none';
             mobileNavChat.classList.add('active');
             mobileNavArchive.classList.remove('active');
             if (mobileNavReview) mobileNavReview.classList.remove('active');
+            if (mobileNavSubLog) mobileNavSubLog.classList.remove('active');
         }
 
         // 移动端：显示档案视图
@@ -3940,9 +4345,11 @@
             mobileChatView.style.display = 'none';
             mobileArchiveView.style.display = 'flex';
             if (mobileReviewView) mobileReviewView.style.display = 'none';
+            if (mobileSubLogView) mobileSubLogView.style.display = 'none';
             mobileNavChat.classList.remove('active');
             mobileNavArchive.classList.add('active');
             if (mobileNavReview) mobileNavReview.classList.remove('active');
+            if (mobileNavSubLog) mobileNavSubLog.classList.remove('active');
             loadMobileFiles();
         }
 
@@ -3952,10 +4359,26 @@
             mobileChatView.style.display = 'none';
             mobileArchiveView.style.display = 'none';
             if (mobileReviewView) mobileReviewView.style.display = 'flex';
+            if (mobileSubLogView) mobileSubLogView.style.display = 'none';
             mobileNavChat.classList.remove('active');
             mobileNavArchive.classList.remove('active');
             if (mobileNavReview) mobileNavReview.classList.add('active');
+            if (mobileNavSubLog) mobileNavSubLog.classList.remove('active');
             loadMobileReview();
+        }
+
+        // 移动端：显示次记视图
+        function showMobileSubLog() {
+            currentMobileView = 'sublog';
+            mobileChatView.style.display = 'none';
+            mobileArchiveView.style.display = 'none';
+            if (mobileReviewView) mobileReviewView.style.display = 'none';
+            if (mobileSubLogView) mobileSubLogView.style.display = 'flex';
+            mobileNavChat.classList.remove('active');
+            mobileNavArchive.classList.remove('active');
+            if (mobileNavReview) mobileNavReview.classList.remove('active');
+            if (mobileNavSubLog) mobileNavSubLog.classList.add('active');
+            loadSubLogProjects();
         }
 
         // 移动端：打开阅读视图
@@ -4340,6 +4763,346 @@
             }
         }
 
+        // ==================== 次记（Sub-log） ====================
+        let subLogState = {
+            projects: [],
+            records: {},
+            currentProjectId: null
+        };
+
+        async function loadSubLogProjects() {
+            const listEl = document.getElementById('sublog-project-list');
+            if (!listEl) return;
+            listEl.innerHTML = '<div class="empty-state">加载中...</div>';
+            try {
+                const res = await fetch('/sub-logs', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!res.ok) throw new Error('加载失败');
+                const data = await res.json();
+                subLogState.projects = data.projects || [];
+                subLogState.records = data.records || {};
+                renderSubLogList();
+            } catch (e) {
+                listEl.innerHTML = '<div class="empty-state">加载失败，请稍后重试</div>';
+            }
+        }
+
+        function renderSubLogList() {
+            const listEl = document.getElementById('sublog-project-list');
+            if (!listEl) return;
+            if (!subLogState.projects.length) {
+                listEl.innerHTML = '<div class="empty-state">还没有记录项目，点右上角新建</div>';
+                return;
+            }
+            listEl.innerHTML = subLogState.projects.map(p => {
+                const recs = subLogState.records[p.id] || {};
+                const dates = Object.keys(recs).sort();
+                const values = dates.map(d => recs[d]);
+                const latest = dates.length ? recs[dates[dates.length - 1]] : null;
+                const unit = p.unit ? ` ${p.unit}` : '';
+                let latestText = '—';
+                if (latest !== null && latest !== undefined) {
+                    if (p.type === 'boolean') {
+                        latestText = latest ? '是' : '否';
+                    } else {
+                        latestText = `${latest}${unit}`;
+                    }
+                }
+                // 首页直接内嵌图表，无需点进详情即可看到趋势
+                const chartHtml = p.chart_type === 'line'
+                    ? buildLineChart(dates, values, p.unit)
+                    : buildHeatmapChart(recs, p.type);
+                return `<div class="sublog-project-card" onclick="showSubLogDetail('${p.id}')">
+                    <div class="sublog-project-header">
+                        <div class="sublog-project-name">${escapeHtml(p.name)}</div>
+                        <div class="sublog-project-latest">最新：${latestText}</div>
+                    </div>
+                    <div class="sublog-card-chart">${chartHtml}</div>
+                    <div class="sublog-project-meta">${p.type === 'boolean' ? '是/否' : '数值'} · ${p.chart_type === 'line' ? '折线图' : '热力图'}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function openSubLogCreate() {
+            const modal = document.getElementById('sublog-create-modal');
+            if (modal) modal.style.display = 'flex';
+            // 默认值
+            document.getElementById('sublog-new-name').value = '';
+            document.querySelector('input[name="sublog-new-type"][value="numeric"]').checked = true;
+            document.getElementById('sublog-new-unit').value = '';
+            document.querySelector('input[name="sublog-new-chart"][value="line"]').checked = true;
+            onSubLogTypeChange();
+        }
+
+        function closeSubLogCreate() {
+            const modal = document.getElementById('sublog-create-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function onSubLogTypeChange() {
+            const type = document.querySelector('input[name="sublog-new-type"]:checked').value;
+            const unitRow = document.getElementById('sublog-new-unit-row');
+            const chartLine = document.querySelector('input[name="sublog-new-chart"][value="line"]');
+            const chartHeat = document.querySelector('input[name="sublog-new-chart"][value="heatmap"]');
+            if (type === 'boolean') {
+                unitRow.style.display = 'none';
+                chartHeat.checked = true;
+                chartLine.disabled = true;
+            } else {
+                unitRow.style.display = '';
+                chartLine.disabled = false;
+            }
+        }
+
+        async function submitSubLogCreate() {
+            const name = document.getElementById('sublog-new-name').value.trim();
+            if (!name) { alert('请填写项目名称'); return; }
+            const type = document.querySelector('input[name="sublog-new-type"]:checked').value;
+            const unit = type === 'numeric' ? document.getElementById('sublog-new-unit').value.trim() : '';
+            const chart_type = document.querySelector('input[name="sublog-new-chart"]:checked').value;
+            try {
+                const res = await fetch('/sub-logs/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    body: JSON.stringify({ name, type, unit, chart_type })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.detail || '创建失败');
+                    return;
+                }
+                closeSubLogCreate();
+                await loadSubLogProjects();
+            } catch (e) {
+                alert('网络异常，请稍后重试');
+            }
+        }
+
+        function showSubLogList() {
+            document.getElementById('sublog-list-view').style.display = '';
+            document.getElementById('sublog-detail-view').style.display = 'none';
+            subLogState.currentProjectId = null;
+            renderSubLogList();
+        }
+
+        async function showSubLogDetail(projectId) {
+            subLogState.currentProjectId = projectId;
+            const project = subLogState.projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            document.getElementById('sublog-list-view').style.display = 'none';
+            document.getElementById('sublog-detail-view').style.display = '';
+
+            document.getElementById('sublog-detail-title').innerText = project.name;
+
+            // 记录输入区
+            const dateInput = document.getElementById('sublog-record-date');
+            const valueInput = document.getElementById('sublog-record-value');
+            const hint = document.getElementById('sublog-record-hint');
+            const today = new Date().toISOString().slice(0, 10);
+            dateInput.value = today;
+
+            if (project.type === 'boolean') {
+                valueInput.style.display = 'none';
+                hint.innerText = '点击「记录」表示今天"是"，不记录表示"否"';
+            } else {
+                valueInput.style.display = '';
+                valueInput.placeholder = `数值（${project.unit || '无单位'}）`;
+                hint.innerText = '';
+            }
+
+            // 拉取最新记录后渲染
+            await loadSubLogProjects();
+            renderSubLogDetail(project);
+        }
+
+        function renderSubLogDetail(project) {
+            const recs = subLogState.records[project.id] || {};
+            const dates = Object.keys(recs).sort();
+            const values = dates.map(d => recs[d]);
+
+            // 统计
+            document.getElementById('sublog-stat-count').innerText = dates.length;
+            if (values.length) {
+                const latest = values[values.length - 1];
+                const unit = project.unit ? ` ${project.unit}` : '';
+                document.getElementById('sublog-stat-latest').innerText = project.type === 'boolean' ? (latest ? '是' : '否') : `${latest}${unit}`;
+                if (project.type === 'numeric') {
+                    const nums = values.map(Number);
+                    document.getElementById('sublog-stat-max').innerText = `${Math.max(...nums)}${unit}`;
+                    document.getElementById('sublog-stat-min').innerText = `${Math.min(...nums)}${unit}`;
+                } else {
+                    document.getElementById('sublog-stat-max').innerText = '—';
+                    document.getElementById('sublog-stat-min').innerText = '—';
+                }
+            } else {
+                document.getElementById('sublog-stat-latest').innerText = '—';
+                document.getElementById('sublog-stat-max').innerText = '—';
+                document.getElementById('sublog-stat-min').innerText = '—';
+            }
+
+            // 图表
+            const chartEl = document.getElementById('sublog-chart');
+            if (project.chart_type === 'line') {
+                chartEl.innerHTML = buildLineChart(dates, values, project.unit);
+            } else {
+                chartEl.innerHTML = buildHeatmapChart(recs, project.type);
+            }
+        }
+
+        async function submitSubLogRecord() {
+            const projectId = subLogState.currentProjectId;
+            if (!projectId) return;
+            const project = subLogState.projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            const dateStr = document.getElementById('sublog-record-date').value;
+            if (!dateStr) { alert('请选择日期'); return; }
+
+            let value;
+            if (project.type === 'boolean') {
+                value = true;
+            } else {
+                const raw = document.getElementById('sublog-record-value').value;
+                if (raw === '') { alert('请填写数值'); return; }
+                value = parseFloat(raw);
+                if (isNaN(value)) { alert('请填写有效数值'); return; }
+            }
+
+            try {
+                const res = await fetch(`/sub-logs/projects/${projectId}/records/${dateStr}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    body: JSON.stringify({ value })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.detail || '记录失败');
+                    return;
+                }
+                document.getElementById('sublog-record-value').value = '';
+                await loadSubLogProjects();
+                renderSubLogDetail(project);
+            } catch (e) {
+                alert('网络异常，请稍后重试');
+            }
+        }
+
+        async function deleteCurrentSubLogProject() {
+            const projectId = subLogState.currentProjectId;
+            if (!projectId) return;
+            if (!confirm('确认删除该项目及其所有记录？')) return;
+            try {
+                const res = await fetch(`/sub-logs/projects/${projectId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.detail || '删除失败');
+                    return;
+                }
+                showSubLogList();
+            } catch (e) {
+                alert('网络异常，请稍后重试');
+            }
+        }
+
+        // 折线图：自绘 SVG，避免引入重型图表库
+        function buildLineChart(dates, values, unit) {
+            if (!values.length) return '<div class="sublog-empty">暂无记录</div>';
+            const W = 320, H = 180, padL = 40, padR = 12, padT = 16, padB = 28;
+            const innerW = W - padL - padR;
+            const innerH = H - padT - padB;
+            const nums = values.map(Number);
+            const minV = Math.min(...nums);
+            const maxV = Math.max(...nums);
+            const range = maxV - minV || 1;
+            const n = nums.length;
+
+            const pts = nums.map((v, i) => {
+                const x = padL + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+                const y = padT + innerH - ((v - minV) / range) * innerH;
+                return [x, y];
+            });
+
+            const path = pts.map((p, i) => (i === 0 ? `M ${p[0]},${p[1]}` : `L ${p[0]},${p[1]}`)).join(' ');
+            const dots = pts.map((p, i) =>
+                `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#4a90d9"><title>${dates[i]}: ${nums[i]}${unit || ''}</title></circle>`
+            ).join('');
+
+            // y 轴刻度
+            const yTicks = [maxV, (maxV + minV) / 2, minV];
+            const yLabels = yTicks.map((v, i) => {
+                const y = padT + (i / 2) * innerH;
+                return `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#888">${v.toFixed(1)}</text>`;
+            }).join('');
+
+            // x 轴首尾日期
+            const xLabels = `<text x="${padL}" y="${H - 8}" text-anchor="start" font-size="10" fill="#888">${dates[0].slice(5)}</text>` +
+                (n > 1 ? `<text x="${W - padR}" y="${H - 8}" text-anchor="end" font-size="10" fill="#888">${dates[n - 1].slice(5)}</text>` : '');
+
+            return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:480px">
+                <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H - padB}" stroke="#ddd"/>
+                <line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="#ddd"/>
+                ${yLabels}
+                ${xLabels}
+                <path d="${path}" fill="none" stroke="#4a90d9" stroke-width="2"/>
+                ${dots}
+            </svg>`;
+        }
+
+        // 热力图：近 20 周日历视图，复用日记热力图的色阶
+        function buildHeatmapChart(records, type) {
+            const today = new Date();
+            // 本周周一
+            const thisMonday = new Date(today);
+            thisMonday.setDate(thisMonday.getDate() - ((thisMonday.getDay() + 6) % 7));
+            // 20 周前的周一（最后一周包含今天）
+            const start = new Date(thisMonday);
+            start.setDate(start.getDate() - 19 * 7);
+
+            const weeks = [];
+            const cur = new Date(start);
+            for (let w = 0; w < 20; w++) {
+                const week = [];
+                for (let d = 0; d < 7; d++) {
+                    const ds = cur.toISOString().slice(0, 10);
+                    week.push({ date: ds, value: records[ds] });
+                    cur.setDate(cur.getDate() + 1);
+                }
+                weeks.push(week);
+            }
+
+            const nums = Object.values(records).map(Number).filter(n => !isNaN(n) && n > 0);
+            const maxV = nums.length ? Math.max(...nums) : 1;
+
+            const cols = weeks.map(week => {
+                const cells = week.map(day => {
+                    const v = day.value;
+                    let cls = 'heatmap-cell empty';
+                    let title = day.date;
+                    if (v !== undefined && v !== null && v !== false) {
+                        if (type === 'boolean') {
+                            cls = 'heatmap-cell level-3';
+                            title += '：是';
+                        } else {
+                            const lvl = Math.min(4, Math.ceil((v / maxV) * 4));
+                            cls = `heatmap-cell level-${lvl}`;
+                            title += `：${v}`;
+                        }
+                    } else {
+                        title += '：无';
+                    }
+                    return `<div class="${cls}" title="${title}"></div>`;
+                }).join('');
+                return `<div class="heatmap-col">${cells}</div>`;
+            }).join('');
+
+            return `<div class="archive-heatmap"><div class="heatmap-grid">${cols}</div></div>`;
+        }
+
         async function postReview(loadingTip) {
             if (isReviewLoading) return;
             isReviewLoading = true;
@@ -4690,9 +5453,17 @@
             const startDate = new Date(today);
             startDate.setDate(today.getDate() - (WEEKS - 1) * 7 - dayOfWeek);
 
-            // 统计近 N 周范围内的写作天数与总对话数
+            // 统计：写作天数与总对话数基于用户全部历史数据，不受热力图 20 周窗口限制
             let activeDays = 0;
             let totalMsgs = 0;
+            for (const ds in dayCounts) {
+                const cnt = dayCounts[ds] || 0;
+                if (cnt > 0) {
+                    activeDays++;
+                    totalMsgs += cnt;
+                }
+            }
+
             const grid = document.createElement('div');
             grid.className = 'heatmap-grid';
 
@@ -4718,10 +5489,6 @@
                         cell.className = `heatmap-cell level-${level}`;
                         if (ds === todayStr) cell.classList.add('today');
                         cell.title = `${ds}：${cnt} 条对话`;
-                        if (cnt > 0) {
-                            activeDays++;
-                            totalMsgs += cnt;
-                        }
                     }
                     col.appendChild(cell);
                 }

@@ -14,6 +14,19 @@ class ArticleDraftBody(BaseModel):
     content: str = ""
 
 
+class SubLogProjectCreate(BaseModel):
+    """次记项目创建请求"""
+    name: str
+    type: str  # "numeric" | "boolean"
+    unit: str = ""  # 仅 numeric 需要
+    chart_type: str  # "line" | "heatmap"
+
+
+class SubLogRecordBody(BaseModel):
+    """次记单条记录写入请求"""
+    value: Any  # numeric 为数字，boolean 为 bool
+
+
 class ArchiveRequest(BaseModel):
     """归档请求模型"""
     conversation: list  # 对话历史

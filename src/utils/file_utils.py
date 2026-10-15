@@ -2,6 +2,7 @@ import os
 import datetime
 import json
 import re
+import uuid
 from typing import Optional
 
 # 获取项目根目录（main.py 所在目录）
@@ -753,3 +754,120 @@ def load_all_archived_diaries_for_review(user_email: Optional[str] = None,
         items.pop(0)
 
     return items
+
+
+# ==================== 次记（Sub-log）数据记录 ====================
+
+SUB_LOGS_FILENAME = "sub_logs.json"
+
+VALID_PROJECT_TYPES = ("numeric", "boolean")
+VALID_CHART_TYPES = ("line", "heatmap")
+
+
+def _get_sub_logs_path(user_email: Optional[str] = None) -> str:
+    """获取次记数据文件路径（用户目录下的 sub_logs.json）"""
+    base_dir = _get_user_base_dir(user_email)
+    return os.path.join(base_dir, SUB_LOGS_FILENAME)
+
+
+def load_sub_logs(user_email: Optional[str] = None) -> dict:
+    """加载次记数据，不存在返回空结构 {"projects": [], "records": {}}"""
+    path = _get_sub_logs_path(user_email)
+    if not os.path.exists(path):
+        return {"projects": [], "records": {}}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # 兼容旧结构，补齐缺省字段
+        data.setdefault("projects", [])
+        data.setdefault("records", {})
+        return data
+    except Exception:
+        return {"projects": [], "records": {}}
+
+
+def save_sub_logs(data: dict, user_email: Optional[str] = None):
+    """保存次记数据到用户目录"""
+    path = _get_sub_logs_path(user_email)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def create_sub_log_project(name: str, ptype: str, unit: str,
+                           chart_type: str, user_email: Optional[str] = None) -> dict:
+    """
+    新建一个次记项目。
+
+    - ptype: "numeric" 或 "boolean"
+    - unit: 仅 numeric 类型需要，boolean 传空串
+    - chart_type: "line" 或 "heatmap"；boolean 强制 heatmap
+    """
+    if ptype not in VALID_PROJECT_TYPES:
+        raise ValueError(f"无效的项目类型: {ptype}")
+    if chart_type not in VALID_CHART_TYPES:
+        raise ValueError(f"无效的图表类型: {chart_type}")
+    # 是/否类只能用热力图
+    if ptype == "boolean":
+        chart_type = "heatmap"
+
+    data = load_sub_logs(user_email)
+    project = {
+        "id": uuid.uuid4().hex,
+        "name": name.strip(),
+        "type": ptype,
+        "unit": (unit or "").strip(),
+        "chart_type": chart_type,
+        "created_at": datetime.datetime.now().isoformat(timespec="seconds"),
+    }
+    data["projects"].append(project)
+    data["records"].setdefault(project["id"], {})
+    save_sub_logs(data, user_email)
+    return project
+
+
+def delete_sub_log_project(project_id: str, user_email: Optional[str] = None) -> bool:
+    """删除项目及其所有记录"""
+    data = load_sub_logs(user_email)
+    before = len(data["projects"])
+    data["projects"] = [p for p in data["projects"] if p["id"] != project_id]
+    data["records"].pop(project_id, None)
+    if len(data["projects"]) == before:
+        return False
+    save_sub_logs(data, user_email)
+    return True
+
+
+def upsert_sub_log_record(project_id: str, date_str: str, value,
+                          user_email: Optional[str] = None) -> bool:
+    """
+    写入/更新某日记录。
+
+    - numeric 项目 value 为数字
+    - boolean 项目 value 为 True/False（True 表示"是"）
+    返回是否成功（项目不存在返回 False）。
+    """
+    data = load_sub_logs(user_email)
+    project = next((p for p in data["projects"] if p["id"] == project_id), None)
+    if not project:
+        return False
+    # 类型归一化
+    if project["type"] == "boolean":
+        value = bool(value)
+    else:
+        value = float(value)
+    data["records"].setdefault(project_id, {})[date_str] = value
+    save_sub_logs(data, user_email)
+    return True
+
+
+def delete_sub_log_record(project_id: str, date_str: str,
+                          user_email: Optional[str] = None) -> bool:
+    """删除某日记录，不存在返回 False"""
+    data = load_sub_logs(user_email)
+    recs = data["records"].get(project_id)
+    if not recs or date_str not in recs:
+        return False
+    del recs[date_str]
+    save_sub_logs(data, user_email)
+    return True
