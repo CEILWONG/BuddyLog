@@ -2630,18 +2630,39 @@
             margin: 10px 0 4px;
         }
 
-        /* 内嵌热力图去掉外层卡片式背景，格子略缩小以适配窄屏 */
-        .sublog-card-chart .archive-heatmap {
-            margin-bottom: 0;
-            padding: 0;
-            background: transparent;
-            box-shadow: none;
+        /* 次记图表卡片：固定高度，风格与日记热力图一致 */
+        .sublog-chart-card {
+            height: 196px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #ffffff 0%, #fff9fa 100%);
+            border-radius: 14px;
+            padding: 14px 14px 12px;
+            box-shadow: 0 2px 10px rgba(214, 48, 49, 0.06);
         }
 
-        .sublog-card-chart .heatmap-cell {
-            width: 10px;
-            height: 10px;
-            border-radius: 2px;
+        /* 图表区占满剩余空间并垂直居中，保证折线图与热力图卡片大小一致 */
+        .sublog-chart-body {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sublog-chart-body svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* 热力图网格：窄屏可横向滑动，宽屏居中 */
+        .sublog-chart-body .heatmap-grid {
+            flex: 0 0 auto;
+            margin: 0 auto;
+            max-width: 100%;
+            padding-bottom: 0;
         }
 
         /* 弹窗通用样式 */
@@ -2813,10 +2834,11 @@
         }
 
         #sublog-chart {
-            min-height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 100%;
+        }
+
+        #sublog-chart-area {
+            margin-bottom: 16px;
         }
 
         .sublog-empty {
@@ -3257,7 +3279,7 @@
                 </div>
 
                 <!-- 图表区 -->
-                <div id="sublog-chart-area" class="sublog-card">
+                <div id="sublog-chart-area">
                     <div id="sublog-chart"></div>
                 </div>
 
@@ -4811,8 +4833,8 @@
                 }
                 // 首页直接内嵌图表，无需点进详情即可看到趋势
                 const chartHtml = p.chart_type === 'line'
-                    ? buildLineChart(dates, values, p.unit)
-                    : buildHeatmapChart(recs, p.type);
+                    ? buildLineChart(p, dates, values)
+                    : buildHeatmapChart(p, recs);
                 return `<div class="sublog-project-card" onclick="showSubLogDetail('${p.id}')">
                     <div class="sublog-project-header">
                         <div class="sublog-project-name">${escapeHtml(p.name)}</div>
@@ -4945,9 +4967,9 @@
             // 图表
             const chartEl = document.getElementById('sublog-chart');
             if (project.chart_type === 'line') {
-                chartEl.innerHTML = buildLineChart(dates, values, project.unit);
+                chartEl.innerHTML = buildLineChart(project, dates, values);
             } else {
-                chartEl.innerHTML = buildHeatmapChart(recs, project.type);
+                chartEl.innerHTML = buildHeatmapChart(project, recs);
             }
         }
 
@@ -5009,98 +5031,145 @@
             }
         }
 
-        // 折线图：自绘 SVG，避免引入重型图表库
-        function buildLineChart(dates, values, unit) {
-            if (!values.length) return '<div class="sublog-empty">暂无记录</div>';
-            const W = 320, H = 180, padL = 40, padR = 12, padT = 16, padB = 28;
-            const innerW = W - padL - padR;
-            const innerH = H - padT - padB;
-            const nums = values.map(Number);
-            const minV = Math.min(...nums);
-            const maxV = Math.max(...nums);
-            const range = maxV - minV || 1;
-            const n = nums.length;
+        // 折线图：自绘 SVG 固定尺寸卡片，避免引入重型图表库
+        function buildLineChart(project, dates, values) {
+            const unit = project.unit ? ` ${project.unit}` : '';
+            let summary = '暂无记录';
+            if (values.length) {
+                const latest = values[values.length - 1];
+                summary = `共 <strong>${values.length}</strong> 次记录 · 最新 <strong>${latest}</strong>${unit}`;
+            }
+            const titleBar = `<div class="heatmap-title"><span>📈 变化趋势</span><span class="heatmap-title-sub">${summary}</span></div>`;
 
-            const pts = nums.map((v, i) => {
-                const x = padL + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
-                const y = padT + innerH - ((v - minV) / range) * innerH;
-                return [x, y];
-            });
+            let body;
+            if (!values.length) {
+                body = '<div class="sublog-empty" style="padding:0">记一条数据，这里就会出现曲线</div>';
+            } else {
+                const W = 300, H = 108, padL = 34, padR = 10, padT = 8, padB = 18;
+                const innerW = W - padL - padR;
+                const innerH = H - padT - padB;
+                const nums = values.map(Number);
+                const dataMin = Math.min(...nums);
+                const dataMax = Math.max(...nums);
+                // 上下留白，避免数据点贴边；全部相等时上下各扩 1 让线居中
+                let minV = dataMin, maxV = dataMax;
+                if (minV === maxV) { minV -= 1; maxV += 1; }
+                const padY = (maxV - minV) * 0.15;
+                minV -= padY; maxV += padY;
+                const range = maxV - minV;
+                const n = nums.length;
 
-            const path = pts.map((p, i) => (i === 0 ? `M ${p[0]},${p[1]}` : `L ${p[0]},${p[1]}`)).join(' ');
-            const dots = pts.map((p, i) =>
-                `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#4a90d9"><title>${dates[i]}: ${nums[i]}${unit || ''}</title></circle>`
-            ).join('');
+                const pts = nums.map((v, i) => {
+                    const x = padL + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+                    const y = padT + innerH - ((v - minV) / range) * innerH;
+                    return [x, y];
+                });
 
-            // y 轴刻度
-            const yTicks = [maxV, (maxV + minV) / 2, minV];
-            const yLabels = yTicks.map((v, i) => {
-                const y = padT + (i / 2) * innerH;
-                return `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#888">${v.toFixed(1)}</text>`;
-            }).join('');
+                const linePath = pts.map((p, i) => (i === 0 ? `M ${p[0]},${p[1]}` : `L ${p[0]},${p[1]}`)).join(' ');
+                // 曲线下方面积渐变填充
+                const areaPath = n > 1
+                    ? `${linePath} L ${pts[n - 1][0]},${H - padB} L ${pts[0][0]},${H - padB} Z`
+                    : '';
+                const dots = pts.map((p, i) =>
+                    `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#fff" stroke="#d63031" stroke-width="2"><title>${dates[i]}：${nums[i]}${project.unit || ''}</title></circle>`
+                ).join('');
 
-            // x 轴首尾日期
-            const xLabels = `<text x="${padL}" y="${H - 8}" text-anchor="start" font-size="10" fill="#888">${dates[0].slice(5)}</text>` +
-                (n > 1 ? `<text x="${W - padR}" y="${H - 8}" text-anchor="end" font-size="10" fill="#888">${dates[n - 1].slice(5)}</text>` : '');
+                // y 轴刻度（3 条虚线网格）
+                const yTicks = [dataMax, (dataMax + dataMin) / 2, dataMin];
+                const gridLines = yTicks.map(v => {
+                    const y = padT + innerH - ((v - minV) / range) * innerH;
+                    return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#eee" stroke-dasharray="3,3"/>` +
+                        `<text x="${padL - 5}" y="${y + 3}" text-anchor="end" font-size="9" fill="#999">${v.toFixed(1)}</text>`;
+                }).join('');
 
-            return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:480px">
-                <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H - padB}" stroke="#ddd"/>
-                <line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="#ddd"/>
-                ${yLabels}
-                ${xLabels}
-                <path d="${path}" fill="none" stroke="#4a90d9" stroke-width="2"/>
-                ${dots}
-            </svg>`;
+                // x 轴首尾日期
+                const xLabels = `<text x="${padL}" y="${H - 5}" text-anchor="start" font-size="9" fill="#999">${dates[0].slice(5)}</text>` +
+                    (n > 1 ? `<text x="${W - padR}" y="${H - 5}" text-anchor="end" font-size="9" fill="#999">${dates[n - 1].slice(5)}</text>` : '');
+
+                body = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <linearGradient id="sublogAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="#d63031" stop-opacity="0.16"/>
+                            <stop offset="1" stop-color="#d63031" stop-opacity="0.02"/>
+                        </linearGradient>
+                    </defs>
+                    ${gridLines}
+                    ${areaPath ? `<path d="${areaPath}" fill="url(#sublogAreaGrad)"/>` : ''}
+                    <path d="${linePath}" fill="none" stroke="#d63031" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                    ${dots}
+                    ${xLabels}
+                </svg>`;
+            }
+
+            return `<div class="sublog-chart-card">${titleBar}<div class="sublog-chart-body">${body}</div></div>`;
         }
 
-        // 热力图：近 20 周日历视图，复用日记热力图的色阶
-        function buildHeatmapChart(records, type) {
+        // 热力图：近 20 周日历视图，完全复用日记热力图的 UI（颗颗分明的方格）
+        function buildHeatmapChart(project, records) {
+            const type = project.type;
+            const unit = project.unit ? ` ${project.unit}` : '';
+            const WEEKS = 20;
             const today = new Date();
-            // 本周周一
-            const thisMonday = new Date(today);
-            thisMonday.setDate(thisMonday.getDate() - ((thisMonday.getDay() + 6) % 7));
-            // 20 周前的周一（最后一周包含今天）
-            const start = new Date(thisMonday);
-            start.setDate(start.getDate() - 19 * 7);
+            today.setHours(0, 0, 0, 0);
+            const todayStr = formatDate(today);
+            const dayOfWeek = today.getDay(); // 0 = 周日
 
-            const weeks = [];
-            const cur = new Date(start);
-            for (let w = 0; w < 20; w++) {
-                const week = [];
-                for (let d = 0; d < 7; d++) {
-                    const ds = cur.toISOString().slice(0, 10);
-                    week.push({ date: ds, value: records[ds] });
-                    cur.setDate(cur.getDate() + 1);
-                }
-                weeks.push(week);
-            }
+            // 与日记热力图一致：起点为 (WEEKS-1)*7 + dayOfWeek 天前的那个周日
+            const startDate = new Date(today);
+            startDate.setDate(today.getDate() - (WEEKS - 1) * 7 - dayOfWeek);
 
             const nums = Object.values(records).map(Number).filter(n => !isNaN(n) && n > 0);
             const maxV = nums.length ? Math.max(...nums) : 1;
 
-            const cols = weeks.map(week => {
-                const cells = week.map(day => {
-                    const v = day.value;
-                    let cls = 'heatmap-cell empty';
-                    let title = day.date;
-                    if (v !== undefined && v !== null && v !== false) {
-                        if (type === 'boolean') {
-                            cls = 'heatmap-cell level-3';
-                            title += '：是';
-                        } else {
-                            const lvl = Math.min(4, Math.ceil((v / maxV) * 4));
-                            cls = `heatmap-cell level-${lvl}`;
-                            title += `：${v}`;
-                        }
-                    } else {
-                        title += '：无';
-                    }
-                    return `<div class="${cls}" title="${title}"></div>`;
-                }).join('');
-                return `<div class="heatmap-col">${cells}</div>`;
-            }).join('');
+            // 统计基于全部记录，不受 20 周窗口限制
+            let activeDays = 0, total = 0;
+            for (const ds in records) {
+                const v = records[ds];
+                if (type === 'boolean' ? !!v : Number(v) > 0) {
+                    activeDays++;
+                    if (type !== 'boolean') total += Number(v);
+                }
+            }
 
-            return `<div class="archive-heatmap"><div class="heatmap-grid">${cols}</div></div>`;
+            let cols = '';
+            for (let w = 0; w < WEEKS; w++) {
+                let cells = '';
+                for (let d = 0; d < 7; d++) {
+                    const cellDate = new Date(startDate);
+                    cellDate.setDate(startDate.getDate() + w * 7 + d);
+                    if (cellDate > today) {
+                        cells += '<div class="heatmap-cell empty"></div>';
+                        continue;
+                    }
+                    const ds = formatDate(cellDate);
+                    const v = records[ds];
+                    let level = 0, title;
+                    if (v === undefined || v === null || v === false) {
+                        title = `${ds}：无记录`;
+                    } else if (type === 'boolean') {
+                        level = 3;
+                        title = `${ds}：是`;
+                    } else {
+                        level = Math.min(4, Math.max(1, Math.ceil((Number(v) / maxV) * 4)));
+                        title = `${ds}：${v}${project.unit || ''}`;
+                    }
+                    const todayCls = ds === todayStr ? ' today' : '';
+                    cells += `<div class="heatmap-cell level-${level}${todayCls}" title="${title}"></div>`;
+                }
+                cols += `<div class="heatmap-col">${cells}</div>`;
+            }
+
+            const summary = type === 'boolean'
+                ? `记了 <strong>${activeDays}</strong> 天`
+                : `记了 <strong>${activeDays}</strong> 天 · 共 <strong>${Number(total.toFixed(1))}</strong>${unit}`;
+            const titleBar = `<div class="heatmap-title"><span>🔥 近 ${WEEKS} 周记录</span><span class="heatmap-title-sub">${summary}</span></div>`;
+
+            // 图例：数值型用少→多色阶，是/否型用灰→着色说明，保持卡片底部高度一致
+            const legend = type === 'boolean'
+                ? `<div class="heatmap-legend"><span>无</span><div class="heatmap-cell level-0"></div><div class="heatmap-cell level-3"></div><span>是</span></div>`
+                : `<div class="heatmap-legend"><span>少</span><div class="heatmap-cell level-0"></div><div class="heatmap-cell level-1"></div><div class="heatmap-cell level-2"></div><div class="heatmap-cell level-3"></div><div class="heatmap-cell level-4"></div><span>多</span></div>`;
+
+            return `<div class="sublog-chart-card">${titleBar}<div class="sublog-chart-body"><div class="heatmap-grid">${cols}</div></div>${legend}</div>`;
         }
 
         async function postReview(loadingTip) {
