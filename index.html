@@ -2605,7 +2605,8 @@
         .sublog-project-meta {
             font-size: 13px;
             color: #6c757d;
-            margin-bottom: 8px;
+            margin-top: 6px;
+            margin-bottom: 0;
         }
 
         .sublog-project-latest {
@@ -2619,6 +2620,7 @@
             justify-content: space-between;
             align-items: baseline;
             gap: 8px;
+            margin-bottom: 8px;
         }
 
         .sublog-project-header .sublog-project-name {
@@ -2640,6 +2642,19 @@
             border-radius: 14px;
             padding: 14px 14px 12px;
             box-shadow: 0 2px 10px rgba(214, 48, 49, 0.06);
+        }
+
+        /* 列表页中图表卡片可点击进入详情 */
+        .sublog-chart-card.clickable {
+            height: 244px;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .sublog-chart-card.clickable:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(214, 48, 49, 0.12);
         }
 
         /* 图表区占满剩余空间并垂直居中，保证折线图与热力图卡片大小一致 */
@@ -4832,17 +4847,21 @@
                     }
                 }
                 // 首页直接内嵌图表，无需点进详情即可看到趋势
-                const chartHtml = p.chart_type === 'line'
-                    ? buildLineChart(p, dates, values)
-                    : buildHeatmapChart(p, recs);
-                return `<div class="sublog-project-card" onclick="showSubLogDetail('${p.id}')">
-                    <div class="sublog-project-header">
+                const headerHtml = `<div class="sublog-project-header">
                         <div class="sublog-project-name">${escapeHtml(p.name)}</div>
                         <div class="sublog-project-latest">最新：${latestText}</div>
-                    </div>
-                    <div class="sublog-card-chart">${chartHtml}</div>
-                    <div class="sublog-project-meta">${p.type === 'boolean' ? '是/否' : '数值'} · ${p.chart_type === 'line' ? '折线图' : '热力图'}</div>
-                </div>`;
+                    </div>`;
+                const footerHtml = `<div class="sublog-project-meta">${p.type === 'boolean' ? '是/否' : '数值'} · ${p.chart_type === 'line' ? '折线图' : '热力图'}</div>`;
+                const chartOpts = {
+                    headerHtml,
+                    footerHtml,
+                    extraClass: 'clickable',
+                    extraAttr: `onclick="showSubLogDetail('${p.id}')"`
+                };
+                const chartHtml = p.chart_type === 'line'
+                    ? buildLineChart(p, dates, values, chartOpts)
+                    : buildHeatmapChart(p, recs, chartOpts);
+                return chartHtml;
             }).join('');
         }
 
@@ -5032,7 +5051,12 @@
         }
 
         // 折线图：自绘 SVG 固定尺寸卡片，避免引入重型图表库
-        function buildLineChart(project, dates, values) {
+        function buildLineChart(project, dates, values, opts) {
+            opts = opts || {};
+            const headerHtml = opts.headerHtml || '';
+            const footerHtml = opts.footerHtml || '';
+            const extraClass = opts.extraClass ? ` ${opts.extraClass}` : '';
+            const extraAttr = opts.extraAttr || '';
             const unit = project.unit ? ` ${project.unit}` : '';
             let summary = '暂无记录';
             if (values.length) {
@@ -5101,11 +5125,16 @@
                 </svg>`;
             }
 
-            return `<div class="sublog-chart-card">${titleBar}<div class="sublog-chart-body">${body}</div></div>`;
+            return `<div class="sublog-chart-card${extraClass}"${extraAttr ? ' ' + extraAttr : ''}>${headerHtml}${titleBar}<div class="sublog-chart-body">${body}</div>${footerHtml}</div>`;
         }
 
         // 热力图：近 20 周日历视图，完全复用日记热力图的 UI（颗颗分明的方格）
-        function buildHeatmapChart(project, records) {
+        function buildHeatmapChart(project, records, opts) {
+            opts = opts || {};
+            const headerHtml = opts.headerHtml || '';
+            const footerHtml = opts.footerHtml || '';
+            const extraClass = opts.extraClass ? ` ${opts.extraClass}` : '';
+            const extraAttr = opts.extraAttr || '';
             const type = project.type;
             const unit = project.unit ? ` ${project.unit}` : '';
             const WEEKS = 20;
@@ -5169,7 +5198,7 @@
                 ? `<div class="heatmap-legend"><span>无</span><div class="heatmap-cell level-0"></div><div class="heatmap-cell level-3"></div><span>是</span></div>`
                 : `<div class="heatmap-legend"><span>少</span><div class="heatmap-cell level-0"></div><div class="heatmap-cell level-1"></div><div class="heatmap-cell level-2"></div><div class="heatmap-cell level-3"></div><div class="heatmap-cell level-4"></div><span>多</span></div>`;
 
-            return `<div class="sublog-chart-card">${titleBar}<div class="sublog-chart-body"><div class="heatmap-grid">${cols}</div></div>${legend}</div>`;
+            return `<div class="sublog-chart-card${extraClass}"${extraAttr ? ' ' + extraAttr : ''}>${headerHtml}${titleBar}<div class="sublog-chart-body"><div class="heatmap-grid">${cols}</div></div>${legend}${footerHtml}</div>`;
         }
 
         async function postReview(loadingTip) {
