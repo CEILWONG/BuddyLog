@@ -2588,21 +2588,23 @@
             display: flex;
             flex-direction: column;
             background: linear-gradient(135deg, #ffffff 0%, #fff9fa 100%);
+            border: 1px solid var(--sublog-card-border, #f1e3e5);
             border-radius: 14px;
             padding: 14px 14px 12px;
-            box-shadow: 0 2px 10px rgba(214, 48, 49, 0.06);
+            box-shadow: 0 2px 10px rgba(214, 48, 49, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
         }
 
         /* 列表页中图表卡片可点击进入详情 */
         .sublog-chart-card.clickable {
             cursor: pointer;
             margin-bottom: 12px;
-            transition: transform 0.15s, box-shadow 0.15s;
+            transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
         }
 
         .sublog-chart-card.clickable:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 14px rgba(214, 48, 49, 0.12);
+            border-color: var(--sublog-card-border-hover, #e6c8cc);
+            box-shadow: 0 6px 18px rgba(214, 48, 49, 0.12);
         }
 
         /* 图表区占满剩余空间并垂直居中，保证折线图与热力图卡片大小一致 */
@@ -4773,14 +4775,14 @@
             }
         }
 
-        // 次记列表卡片浅色背景色板：按项目顺序循环取色，便于区分
+        // 次记列表卡片浅色背景色板：按项目顺序循环取色，背景与边框同色系，便于区分不同项目
         const SUBLOG_CARD_COLORS = [
-            'linear-gradient(135deg, #ffffff 0%, #fff5f7 100%)',
-            'linear-gradient(135deg, #ffffff 0%, #f2f8ff 100%)',
-            'linear-gradient(135deg, #ffffff 0%, #f3fbf4 100%)',
-            'linear-gradient(135deg, #ffffff 0%, #fffaec 100%)',
-            'linear-gradient(135deg, #ffffff 0%, #f8f4ff 100%)',
-            'linear-gradient(135deg, #ffffff 0%, #effafb 100%)'
+            { bg: 'linear-gradient(135deg, #ffffff 0%, #fff5f7 100%)', border: '#f4d0d7', borderHover: '#e9adb9' },
+            { bg: 'linear-gradient(135deg, #ffffff 0%, #f2f8ff 100%)', border: '#cfe2f7', borderHover: '#a7c8ee' },
+            { bg: 'linear-gradient(135deg, #ffffff 0%, #f3fbf4 100%)', border: '#cfe9d3', borderHover: '#a5d4ae' },
+            { bg: 'linear-gradient(135deg, #ffffff 0%, #fffaec 100%)', border: '#f3e1b4', borderHover: '#e7cb8a' },
+            { bg: 'linear-gradient(135deg, #ffffff 0%, #f8f4ff 100%)', border: '#ded0f5', borderHover: '#bfa6eb' },
+            { bg: 'linear-gradient(135deg, #ffffff 0%, #effafb 100%)', border: '#c9e8ec', borderHover: '#9bd4db' }
         ];
 
         function renderSubLogList() {
@@ -4795,11 +4797,12 @@
                 const dates = Object.keys(recs).sort();
                 const values = dates.map(d => recs[d]);
                 // 首页直接内嵌图表，项目名与图表标题合并为一行，无需点进详情即可看到趋势
+                const tone = SUBLOG_CARD_COLORS[idx % SUBLOG_CARD_COLORS.length];
                 const chartOpts = {
                     titleName: `${p.chart_type === 'line' ? '📈' : '🔥'} ${escapeHtml(p.name)}`,
                     extraClass: 'clickable',
                     extraAttr: `onclick="showSubLogDetail('${p.id}')"`,
-                    extraStyle: `background:${SUBLOG_CARD_COLORS[idx % SUBLOG_CARD_COLORS.length]}`
+                    extraStyle: `background:${tone.bg};--sublog-card-border:${tone.border};--sublog-card-border-hover:${tone.borderHover}`
                 };
                 return p.chart_type === 'line'
                     ? buildLineChart(p, dates, values, chartOpts)
