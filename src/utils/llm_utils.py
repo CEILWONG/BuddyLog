@@ -44,6 +44,12 @@ LLM_KEY_REQUIRED_GREETING = (
     "我就能继续陪你记录每天的点滴、做复盘回顾了。"
 )
 
+# 采样温度：按场景区分。抽取类调用要接近确定性，聊天类保留一点发挥空间；
+# 全部走供应商默认值会让记忆抽取也在“自由创作”，是幻觉与记忆漂移的推手之一。
+CREATIVE_TEMPERATURE = float(os.getenv("CREATIVE_TEMPERATURE", "0.7"))
+BALANCED_TEMPERATURE = float(os.getenv("BALANCED_TEMPERATURE", "0.4"))
+FACTUAL_TEMPERATURE = float(os.getenv("FACTUAL_TEMPERATURE", "0.2"))
+
 # 系统默认客户端
 _system_client = OpenAI(api_key=SYSTEM_API_KEY, base_url=OPENAI_BASE_URL)
 
@@ -117,6 +123,21 @@ def mask_api_key(api_key: Optional[str]) -> str:
     if len(key) <= 8:
         return "****"
     return f"{key[:4]}****{key[-4:]}"
+
+
+def llm_params(enable_thinking: bool, temperature: Optional[float] = None,
+               max_tokens: Optional[int] = None) -> dict:
+    """构建 chat.completions.create 的采样参数。
+
+    开启 thinking 的模型通常不接受自定义 temperature，因此仅在关闭 thinking 时传入；
+    max_tokens 用于给抽取类调用设硬上限，避免异常长输出。
+    """
+    params = {"extra_body": {"enable_thinking": enable_thinking}}
+    if temperature is not None and not enable_thinking:
+        params["temperature"] = temperature
+    if max_tokens is not None:
+        params["max_tokens"] = max_tokens
+    return params
 
 
 def resolve_llm(user_email: Optional[str] = None) -> LLMContext:

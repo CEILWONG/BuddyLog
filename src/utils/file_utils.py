@@ -46,17 +46,29 @@ def _load_md_file(filename: str, user_email: Optional[str] = None) -> str:
     return ""
 
 
+def _get_custom_profile_path(user_email: Optional[str] = None):
+    """用户自定义 profile 文件路径（不存在则返回 None）"""
+    if not user_email:
+        return None
+    from src.utils.user_utils import get_user_settings
+    settings = get_user_settings(user_email) or {}
+    custom_profile = settings.get("profile_file")
+    if custom_profile and os.path.exists(custom_profile):
+        return custom_profile
+    return None
+
+
 def load_profile(user_email: Optional[str] = None):
-    """加载profile.md文件内容"""
-    # 如果用户设置了自定义profile，使用用户的
-    if user_email:
-        from src.utils.user_utils import get_user_settings
-        settings = get_user_settings(user_email)
-        custom_profile = settings.get("profile_file")
-        if custom_profile and os.path.exists(custom_profile):
-            with open(custom_profile, "r", encoding="utf-8") as f:
-                return f.read()
-    # 否则使用系统默认profile
+    """加载 profile.md：用户自定义 > 用户目录副本 > 全局默认"""
+    custom_profile = _get_custom_profile_path(user_email)
+    if custom_profile:
+        with open(custom_profile, "r", encoding="utf-8") as f:
+            return f.read()
+
+    content = _load_md_file("profile.md", user_email)
+    if content:
+        return content
+    # 用户目录下没有 profile.md 时回落到全局默认（data/profile.md）
     return _load_md_file("profile.md")
 
 
@@ -71,6 +83,9 @@ def extract_agent_persona(user_email: Optional[str] = None) -> str:
     if match:
         persona = match.group(1).strip()
         return persona
+    # 系统默认 profile.md 整份都是 Agent 人设（没有用户档案），直接整体作为 persona
+    if not _get_custom_profile_path(user_email):
+        return content.strip()
     return ""
 
 
@@ -78,6 +93,9 @@ def extract_profile_without_persona(user_email: Optional[str] = None) -> str:
     """从profile.md中提取除角色设定外的其他内容"""
     content = load_profile(user_email)
     if not content:
+        return ""
+    # 系统默认 profile.md 是纯人设文件，不应再当作“用户档案”注入
+    if not _get_custom_profile_path(user_email):
         return ""
     
     # 移除角色设定部分，保留其他内容
@@ -184,6 +202,46 @@ def load_recent_diaries(user_email: Optional[str] = None):
                 conversations.append(f"{header}\n{conversation}")
 
     return conversations
+
+
+def load_archived_conversations_by_date(user_email: Optional[str] = None):
+    """按日期升序返回所有已归档日记里的用户原话：[(date_str, text), ...]
+
+    同一天有多份归档时合并；草稿不计入（草稿归档后会自然进入记忆）。
+    """
+    diaries_dir = _get_diaries_dir(user_email)
+    if not os.path.exists(diaries_dir):
+        return []
+
+    grouped = {}
+    for filename in os.listdir(diaries_dir):
+        if not re.match(r"diary_\d{4}-\d{2}-\d{2}_\d+\.md$", filename):
+            continue
+        date_str = _extract_date_from_archive(filename)
+        if not date_str:
+            continue
+        filepath = os.path.join(diaries_dir, filename)
+        with open(filepath, "r", encoding="utf-8") as f:
+            text = _extract_conversation_from_archive(f.read())
+        if text.strip():
+            grouped.setdefault(date_str, []).append(text.strip())
+
+    # 同一天可能有多份归档，且后一份常包含前一份的全部内容；
+    # 按行去重，避免重建时把同一句话重复喂给模型多次。
+    result = []
+    for date_str in sorted(grouped):
+        seen = set()
+        lines = []
+        for text in grouped[date_str]:
+            for line in text.splitlines():
+                key = line.strip()
+                if key and key not in seen:
+                    seen.add(key)
+                    lines.append(key)
+        if lines:
+            result.append((date_str, "\n".join(lines)))
+
+    return result
 
 
 def get_today_draft_file(user_email: Optional[str] = None):
@@ -536,23 +594,6 @@ def auto_archive_expired_drafts(archive_service, user_email: Optional[str] = Non
         archived.append({'old_draft': filename, 'new_file': result['filename']})
     
     return archived
-
-
-def update_memory_file(new_memory, user_email: Optional[str] = None):
-    """更新memory.md文件"""
-    if user_email:
-        from src.utils.user_utils import get_user_memory_path
-        memory_path = get_user_memory_path(user_email)
-        if memory_path:
-            # 确保目录存在
-            os.makedirs(os.path.dirname(memory_path), exist_ok=True)
-            with open(memory_path, "w", encoding="utf-8") as f:
-                f.write(new_memory)
-            return
-    # 回退到默认路径
-    memory_path = os.path.join(DATA_DIR, "memory.md")
-    with open(memory_path, "w", encoding="utf-8") as f:
-        f.write(new_memory)
 
 
 def list_diary_files(user_email: Optional[str] = None):

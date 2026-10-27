@@ -437,6 +437,22 @@
             font-size: 1.2rem;
         }
 
+        .reader-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .reset-memory-btn {
+            color: #d63031;
+            border-color: #d63031;
+        }
+
+        .reset-memory-btn:hover {
+            background: #d63031;
+            color: #fff;
+        }
+
         #reader-content {
             flex: 1;
             padding: 30px;
@@ -3102,7 +3118,13 @@
         <div id="reader-view">
             <div id="reader-header">
                 <h2 id="reader-title">📄 查看文件</h2>
-                <button onclick="showChat()" class="btn-secondary">返回聊天</button>
+                <div class="reader-actions">
+                    <button id="rebuild-memory-btn" class="btn-secondary" onclick="rebuildMemory()"
+                        style="display:none">重建记忆</button>
+                    <button id="reset-memory-btn" class="btn-secondary reset-memory-btn" onclick="resetMemory()"
+                        style="display:none">重置记忆</button>
+                    <button onclick="showChat()" class="btn-secondary">返回聊天</button>
+                </div>
             </div>
             <div id="reader-content">
                 <div class="empty-state">选择一个文件查看内容</div>
@@ -3361,7 +3383,13 @@
     <div id="mobile-reader-view">
         <div id="mobile-reader-header">
             <h2 id="mobile-reader-title">📄 查看文件</h2>
-            <button onclick="closeMobileReader()" class="btn-secondary">返回</button>
+            <div class="reader-actions">
+                <button id="mobile-rebuild-memory-btn" class="btn-secondary" onclick="rebuildMemory()"
+                    style="display:none">重建</button>
+                <button id="mobile-reset-memory-btn" class="btn-secondary reset-memory-btn" onclick="resetMemory()"
+                    style="display:none">重置</button>
+                <button onclick="closeMobileReader()" class="btn-secondary">返回</button>
+            </div>
         </div>
         <div id="mobile-reader-content">
             <div class="empty-state">选择一个文件查看内容</div>
@@ -3412,6 +3440,12 @@
 
         let history = [];
         let currentMobileView = 'chat';
+
+        // 当前正在阅读的文件（用于记忆重建时只更新记忆页面的进度）
+        let currentReaderFile = null;
+        let currentMobileReaderFile = null;
+        let rebuildPollTimer = null;
+        let rebuildRunning = false;
 
         // 打开移动端用户菜单
         async function openMobileUserMenu() {
@@ -4310,7 +4344,10 @@
             }
 
             document.getElementById('reader-title').innerText = '📄 ' + filename.replace('.md', '');
+            currentReaderFile = filename;
+            toggleResetMemoryButton(filename);
             loadFileContent(filename);
+            if (filename === 'memory.md') syncRebuildStatus();
         }
 
         // 移动端：显示聊天视图
@@ -4372,7 +4409,19 @@
         function openMobileReader(filename) {
             mobileReaderView.style.display = 'flex';
             document.getElementById('mobile-reader-title').innerText = '📄 ' + filename.replace('.md', '');
+            currentMobileReaderFile = filename;
+            toggleResetMemoryButton(filename);
             loadMobileFileContent(filename);
+            if (filename === 'memory.md') syncRebuildStatus();
+        }
+
+        // 只在查看长期记忆时显示重建/重置按钮
+        function toggleResetMemoryButton(filename) {
+            const show = filename === 'memory.md';
+            ['rebuild-memory-btn', 'reset-memory-btn', 'mobile-rebuild-memory-btn', 'mobile-reset-memory-btn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = show ? 'inline-block' : 'none';
+            });
         }
 
         // 移动端：关闭阅读视图
@@ -4388,6 +4437,10 @@
                 });
                 if (res.ok) {
                     const content = await res.text();
+                    if (!content.trim() && filename === 'memory.md') {
+                        document.getElementById('reader-content').innerHTML = '<div class="empty-state">长期记忆已清空，MOSS 会重新开始了解你</div>';
+                        return;
+                    }
                     let html = renderMarkdown(content);
                     document.getElementById('reader-content').innerHTML = html;
                 } else {
@@ -4406,6 +4459,11 @@
                 });
                 if (res.ok) {
                     const content = await res.text();
+                    if (rebuildRunning && filename === 'memory.md') return;
+                    if (!content.trim() && filename === 'memory.md') {
+                        document.getElementById('mobile-reader-content').innerHTML = '<div class="empty-state">长期记忆已清空，MOSS 会重新开始了解你</div>';
+                        return;
+                    }
                     let html = renderMarkdown(content);
                     document.getElementById('mobile-reader-content').innerHTML = html;
                 } else {
@@ -4413,6 +4471,130 @@
                 }
             } catch (e) {
                 document.getElementById('mobile-reader-content').innerHTML = '<div class="empty-state">加载失败</div>';
+            }
+        }
+
+        // 重置长期记忆
+        async function resetMemory() {
+            if (!confirm('确定要重置长期记忆吗？\n\n清空后 MOSS 将不再记得你的身份、关系、目标、偏好和过去的重要事件。\n\n日记档案和聊天记录不会被删除，服务器会保留一份备份。')) {
+                return;
+            }
+            if (!confirm('再确认一次：长期记忆将被清空。')) {
+                return;
+            }
+            try {
+                const res = await fetch('/memory', { method: 'DELETE', headers: getAuthHeaders() });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    alert(data.detail || '重置失败，请稍后重试。');
+                    return;
+                }
+                alert('长期记忆已重置，MOSS 会重新开始了解你。');
+                refreshMemoryView();
+            } catch (e) {
+                alert('重置失败，请稍后重试。');
+            }
+        }
+
+        // 重建进行中时禁用重置，避免清空与重建互相覆盖
+        function setMemoryButtonsDisabled(disabled) {
+            ['rebuild-memory-btn', 'reset-memory-btn', 'mobile-rebuild-memory-btn', 'mobile-reset-memory-btn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = disabled;
+            });
+        }
+
+        function refreshMemoryView() {
+            if (currentReaderFile === 'memory.md') loadFileContent('memory.md');
+            if (currentMobileReaderFile === 'memory.md') loadMobileFileContent('memory.md');
+        }
+
+        // 按需重建：重放全部历史日记，重新生成长期记忆
+        async function rebuildMemory() {
+            if (!confirm('将按时间顺序读取你的全部已归档日记，重新生成长期记忆。\n\n· 重建期间现有记忆保持可用，不影响的聊天\n· 全部成功后才一次性切换（旧记忆留带时间戳的备份）\n· 如果有超过 10% 的天数抽取失败，会自动放弃，原记忆不变\n· 每批最多 15 天并行抽取，几百天也只要几分钟\n\n确定开始重建吗？')) {
+                return;
+            }
+            if (!confirm('再确认一次：开始后台重建长期记忆。')) {
+                return;
+            }
+            try {
+                const res = await fetch('/memory/rebuild', { method: 'POST', headers: getAuthHeaders() });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.started) {
+                    alert(data.detail || data.error || '无法开始重建');
+                    return;
+                }
+                setMemoryButtonsDisabled(true);
+                showRebuildProgress({ status: 'running', phase: 'extract', total: data.total, done: 0 });
+                pollRebuildStatus();
+            } catch (e) {
+                alert('无法开始重建，请稍后重试。');
+            }
+        }
+
+        function showRebuildProgress(state) {
+            const progress = state.total ? `${state.done}/${state.total} 天` : '准备中';
+            const current = state.current_date ? `（${state.current_date}）` : '';
+            const phaseText = {
+                extract: '正在按日期抽取事实…',
+                merge: '正在合并结果…',
+                commit: '正在切换到新记忆…'
+            }[state.phase] || '正在重建长期记忆…';
+            const failed = state.failed ? `<br><span style="color:#d63031">${state.failed} 天抽取失败</span>` : '';
+            const html = `<div class="empty-state">${phaseText}<br>${progress}${current}${failed}<br>`
+                + `<span style="font-size:0.85rem;color:#636e72">重建期间仍显示旧记忆，成功后才会切换</span></div>`;
+            if (currentReaderFile === 'memory.md') {
+                document.getElementById('reader-content').innerHTML = html;
+            }
+            if (currentMobileReaderFile === 'memory.md') {
+                document.getElementById('mobile-reader-content').innerHTML = html;
+            }
+        }
+
+        async function pollRebuildStatus() {
+            try {
+                const res = await fetch('/memory/rebuild/status', { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error('status failed');
+                const state = await res.json();
+
+                if (state.status === 'running') {
+                    rebuildRunning = true;
+                    showRebuildProgress(state);
+                    rebuildPollTimer = setTimeout(pollRebuildStatus, 1500);
+                    return;
+                }
+
+                rebuildRunning = false;
+                setMemoryButtonsDisabled(false);
+                if (state.status === 'done') {
+                    alert(`长期记忆重建完成：共处理 ${state.total} 天。${state.message || ''}`);
+                } else if (state.status === 'error') {
+                    alert('重建未完成：' + (state.message || '未知错误'));
+                } else if (state.status === 'interrupted') {
+                    alert(state.message || '重建已中断，原记忆未改动。');
+                }
+                refreshMemoryView();
+            } catch (e) {
+                setMemoryButtonsDisabled(false);
+                alert('查询重建进度失败，请刷新页面确认结果。');
+            }
+        }
+
+        // 打开记忆页时同步进度：服务端可能在别处启动过重建
+        async function syncRebuildStatus() {
+            if (rebuildPollTimer) return;
+            try {
+                const res = await fetch('/memory/rebuild/status', { headers: getAuthHeaders() });
+                if (!res.ok) return;
+                const state = await res.json();
+                if (state.status === 'running') {
+                    rebuildRunning = true;
+                    setMemoryButtonsDisabled(true);
+                    showRebuildProgress(state);
+                    pollRebuildStatus();
+                }
+            } catch (e) {
+                // 进度查询失败不影响阅读记忆
             }
         }
 

@@ -563,6 +563,49 @@ async def get_file(filename: str, current_email: str = Depends(get_current_user)
     return FileResponse(filepath, media_type="text/markdown", headers=headers)
 
 
+@app.delete("/memory")
+async def reset_memory(current_email: str = Depends(get_current_user)):
+    """重置长期记忆：清空记忆内容，并在用户目录保留一份带时间戳的备份"""
+    from src.services.memory_service import get_rebuild_status
+    from src.utils.file_utils import _get_user_base_dir
+    from src.utils.memory_store import backup_and_clear, discard_staged
+
+    if get_rebuild_status(current_email).get("status") == "running":
+        raise HTTPException(status_code=409, detail="长期记忆正在重建中，请等待完成后再重置")
+
+    os.makedirs(_get_user_base_dir(current_email), exist_ok=True)
+    stamp = backup_and_clear(current_email)
+    discard_staged(current_email)
+
+    print(f"[Memory] 用户 {current_email} 重置了长期记忆，备份时间戳 {stamp}")
+    return {"message": "长期记忆已重置", "backup": stamp}
+
+
+@app.post("/memory/rebuild")
+async def rebuild_memory(current_email: str = Depends(get_current_user)):
+    """按时间顺序重放历史日记，重建长期记忆（后台执行，前端轮询进度）"""
+    from src.services.memory_service import MemoryService, start_rebuild
+
+    service = MemoryService(MODEL, openai_client, ENABLE_THINKING)
+    result = start_rebuild(service, current_email)
+    if not result.get("started"):
+        raise HTTPException(status_code=409, detail=result.get("error") or "无法开始重建")
+
+    print(
+        f"[Memory] 用户 {current_email} 开始重建长期记忆，"
+        f"{result['total']} 天 / {result['batches']} 批"
+    )
+    return {"message": "已开始重建长期记忆", **result}
+
+
+@app.get("/memory/rebuild/status")
+async def rebuild_memory_status(current_email: str = Depends(get_current_user)):
+    """查询当前用户的长期记忆重建进度"""
+    from src.services.memory_service import get_rebuild_status
+
+    return get_rebuild_status(current_email)
+
+
 # ==================== 文章草稿接口（每用户单槽位） ====================
 
 @app.get("/article-draft")
@@ -745,8 +788,8 @@ async def export_data(current_email: str = Depends(get_current_user)):
         zip_buffer = io.BytesIO()
         
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            # 添加系统文件（memory.md, profile.md）
-            system_files = ['memory.md', 'profile.md']
+            # 添加系统文件（memory.md 渲染视图 + memory.json 事实源 + profile.md）
+            system_files = ['memory.md', 'memory.json', 'profile.md']
             for filename in system_files:
                 filepath = os.path.join(base_dir, filename)
                 if os.path.exists(filepath):

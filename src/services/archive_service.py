@@ -13,7 +13,13 @@ from src.utils.file_utils import (
 )
 from src.services.memory_service import MemoryService
 from src.utils.user_utils import extract_usage_tokens, update_user_usage
-from src.utils.llm_utils import resolve_llm, describe_llm_error
+from src.utils.llm_utils import (
+    BALANCED_TEMPERATURE,
+    FACTUAL_TEMPERATURE,
+    describe_llm_error,
+    llm_params,
+    resolve_llm,
+)
 from openai import OpenAI
 
 
@@ -54,16 +60,13 @@ class ArchiveService:
         ]
         
         # 调用API (OpenAI 格式)
-        # 构建 extra_body 参数（明确传递 enable_thinking 控制深度思考）
-        extra_body = {"enable_thinking": self.enable_thinking}
-        
         ctx = resolve_llm(user_email)
         
         try:
             extraction_response = ctx.client.chat.completions.create(
                 model=ctx.model,
                 messages=extraction_messages,
-                extra_body=extra_body
+                **llm_params(self.enable_thinking, FACTUAL_TEMPERATURE, max_tokens=1200),
             )
         except Exception as e:
             raise Exception(describe_llm_error(e, ctx))
@@ -124,9 +127,6 @@ class ArchiveService:
         ]
 
         # 调用API (OpenAI 格式)
-        # 构建 extra_body 参数（明确传递 enable_thinking 控制深度思考）
-        extra_body = {"enable_thinking": self.enable_thinking}
-        
         # 归档消耗计入该用户，因此使用用户生效的客户端与模型
         ctx = resolve_llm(user_email)
         
@@ -134,7 +134,7 @@ class ArchiveService:
             article_response = ctx.client.chat.completions.create(
                 model=ctx.model,
                 messages=article_messages,
-                extra_body=extra_body
+                **llm_params(self.enable_thinking, BALANCED_TEMPERATURE),
             )
         except Exception as e:
             raise Exception(describe_llm_error(e, ctx))

@@ -16,7 +16,12 @@ from src.utils.user_utils import (
     extract_usage_tokens,
     update_user_usage,
 )
-from src.utils.llm_utils import resolve_llm, describe_llm_error
+from src.utils.llm_utils import (
+    BALANCED_TEMPERATURE,
+    describe_llm_error,
+    llm_params,
+    resolve_llm,
+)
 
 
 # 更新条件常量：至少间隔 2 天且新增 20 轮对话才能再次触发复盘
@@ -196,8 +201,6 @@ class ReviewService:
 
         messages = [{"role": "system", "content": prompt}]
 
-        extra_body = {"enable_thinking": self.enable_thinking}
-
         # 复盘消耗计入该用户，因此使用用户生效的客户端与模型
         ctx = resolve_llm(user_email)
 
@@ -205,7 +208,7 @@ class ReviewService:
             response = ctx.client.chat.completions.create(
                 model=ctx.model,
                 messages=messages,
-                extra_body=extra_body,
+                **llm_params(self.enable_thinking, BALANCED_TEMPERATURE),
             )
         except Exception as e:
             raise Exception(describe_llm_error(e, ctx))
