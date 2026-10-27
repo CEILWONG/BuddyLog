@@ -2581,57 +2581,6 @@
             padding: 16px;
         }
 
-        .sublog-project-card {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .sublog-project-card:hover {
-            background: #e9ecef;
-            border-color: #adb5bd;
-        }
-
-        .sublog-project-name {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        .sublog-project-meta {
-            font-size: 13px;
-            color: #6c757d;
-            margin-top: 6px;
-            margin-bottom: 0;
-        }
-
-        .sublog-project-latest {
-            font-size: 14px;
-            color: #495057;
-        }
-
-        /* 卡片头部：名称 + 最新值同行 */
-        .sublog-project-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .sublog-project-header .sublog-project-name {
-            margin-bottom: 0;
-        }
-
-        /* 首页内嵌图表 */
-        .sublog-card-chart {
-            margin: 10px 0 4px;
-        }
-
         /* 次记图表卡片：固定高度，风格与日记热力图一致 */
         .sublog-chart-card {
             height: 196px;
@@ -2646,7 +2595,6 @@
 
         /* 列表页中图表卡片可点击进入详情 */
         .sublog-chart-card.clickable {
-            height: 244px;
             cursor: pointer;
             margin-bottom: 12px;
             transition: transform 0.15s, box-shadow 0.15s;
@@ -4825,6 +4773,16 @@
             }
         }
 
+        // 次记列表卡片浅色背景色板：按项目顺序循环取色，便于区分
+        const SUBLOG_CARD_COLORS = [
+            'linear-gradient(135deg, #ffffff 0%, #fff5f7 100%)',
+            'linear-gradient(135deg, #ffffff 0%, #f2f8ff 100%)',
+            'linear-gradient(135deg, #ffffff 0%, #f3fbf4 100%)',
+            'linear-gradient(135deg, #ffffff 0%, #fffaec 100%)',
+            'linear-gradient(135deg, #ffffff 0%, #f8f4ff 100%)',
+            'linear-gradient(135deg, #ffffff 0%, #effafb 100%)'
+        ];
+
         function renderSubLogList() {
             const listEl = document.getElementById('sublog-project-list');
             if (!listEl) return;
@@ -4832,36 +4790,20 @@
                 listEl.innerHTML = '<div class="empty-state">还没有记录项目，点右上角新建</div>';
                 return;
             }
-            listEl.innerHTML = subLogState.projects.map(p => {
+            listEl.innerHTML = subLogState.projects.map((p, idx) => {
                 const recs = subLogState.records[p.id] || {};
                 const dates = Object.keys(recs).sort();
                 const values = dates.map(d => recs[d]);
-                const latest = dates.length ? recs[dates[dates.length - 1]] : null;
-                const unit = p.unit ? ` ${p.unit}` : '';
-                let latestText = '—';
-                if (latest !== null && latest !== undefined) {
-                    if (p.type === 'boolean') {
-                        latestText = latest ? '是' : '否';
-                    } else {
-                        latestText = `${latest}${unit}`;
-                    }
-                }
-                // 首页直接内嵌图表，无需点进详情即可看到趋势
-                const headerHtml = `<div class="sublog-project-header">
-                        <div class="sublog-project-name">${escapeHtml(p.name)}</div>
-                        <div class="sublog-project-latest">最新：${latestText}</div>
-                    </div>`;
-                const footerHtml = `<div class="sublog-project-meta">${p.type === 'boolean' ? '是/否' : '数值'} · ${p.chart_type === 'line' ? '折线图' : '热力图'}</div>`;
+                // 首页直接内嵌图表，项目名与图表标题合并为一行，无需点进详情即可看到趋势
                 const chartOpts = {
-                    headerHtml,
-                    footerHtml,
+                    titleName: `${p.chart_type === 'line' ? '📈' : '🔥'} ${escapeHtml(p.name)}`,
                     extraClass: 'clickable',
-                    extraAttr: `onclick="showSubLogDetail('${p.id}')"`
+                    extraAttr: `onclick="showSubLogDetail('${p.id}')"`,
+                    extraStyle: `background:${SUBLOG_CARD_COLORS[idx % SUBLOG_CARD_COLORS.length]}`
                 };
-                const chartHtml = p.chart_type === 'line'
+                return p.chart_type === 'line'
                     ? buildLineChart(p, dates, values, chartOpts)
                     : buildHeatmapChart(p, recs, chartOpts);
-                return chartHtml;
             }).join('');
         }
 
@@ -5053,17 +4995,16 @@
         // 折线图：自绘 SVG 固定尺寸卡片，避免引入重型图表库
         function buildLineChart(project, dates, values, opts) {
             opts = opts || {};
-            const headerHtml = opts.headerHtml || '';
-            const footerHtml = opts.footerHtml || '';
             const extraClass = opts.extraClass ? ` ${opts.extraClass}` : '';
             const extraAttr = opts.extraAttr || '';
+            const extraStyle = opts.extraStyle ? ` style="${opts.extraStyle}"` : '';
             const unit = project.unit ? ` ${project.unit}` : '';
             let summary = '暂无记录';
             if (values.length) {
                 const latest = values[values.length - 1];
                 summary = `共 <strong>${values.length}</strong> 次记录 · 最新 <strong>${latest}</strong>${unit}`;
             }
-            const titleBar = `<div class="heatmap-title"><span>📈 变化趋势</span><span class="heatmap-title-sub">${summary}</span></div>`;
+            const titleBar = `<div class="heatmap-title"><span>${opts.titleName || '📈 变化趋势'}</span><span class="heatmap-title-sub">${summary}</span></div>`;
 
             let body;
             if (!values.length) {
@@ -5125,16 +5066,15 @@
                 </svg>`;
             }
 
-            return `<div class="sublog-chart-card${extraClass}"${extraAttr ? ' ' + extraAttr : ''}>${headerHtml}${titleBar}<div class="sublog-chart-body">${body}</div>${footerHtml}</div>`;
+            return `<div class="sublog-chart-card${extraClass}"${extraAttr ? ' ' + extraAttr : ''}${extraStyle}>${titleBar}<div class="sublog-chart-body">${body}</div></div>`;
         }
 
         // 热力图：近 20 周日历视图，完全复用日记热力图的 UI（颗颗分明的方格）
         function buildHeatmapChart(project, records, opts) {
             opts = opts || {};
-            const headerHtml = opts.headerHtml || '';
-            const footerHtml = opts.footerHtml || '';
             const extraClass = opts.extraClass ? ` ${opts.extraClass}` : '';
             const extraAttr = opts.extraAttr || '';
+            const extraStyle = opts.extraStyle ? ` style="${opts.extraStyle}"` : '';
             const type = project.type;
             const unit = project.unit ? ` ${project.unit}` : '';
             const WEEKS = 20;
@@ -5188,17 +5128,26 @@
                 cols += `<div class="heatmap-col">${cells}</div>`;
             }
 
-            const summary = type === 'boolean'
+            let summary = type === 'boolean'
                 ? `记了 <strong>${activeDays}</strong> 天`
                 : `记了 <strong>${activeDays}</strong> 天 · 共 <strong>${Number(total.toFixed(1))}</strong>${unit}`;
-            const titleBar = `<div class="heatmap-title"><span>🔥 近 ${WEEKS} 周记录</span><span class="heatmap-title-sub">${summary}</span></div>`;
+            // 列表页标题与项目名合并为一行时，补上最新值并精简文案
+            if (opts.titleName) {
+                const sortedDates = Object.keys(records).sort();
+                if (sortedDates.length) {
+                    const lv = records[sortedDates[sortedDates.length - 1]];
+                    const lt = type === 'boolean' ? (lv ? '是' : '否') : `${lv}${unit}`;
+                    summary = `记了 <strong>${activeDays}</strong> 天 · 最新 <strong>${lt}</strong>`;
+                }
+            }
+            const titleBar = `<div class="heatmap-title"><span>${opts.titleName || `🔥 近 ${WEEKS} 周记录`}</span><span class="heatmap-title-sub">${summary}</span></div>`;
 
             // 图例：数值型用少→多色阶，是/否型用灰→着色说明，保持卡片底部高度一致
             const legend = type === 'boolean'
                 ? `<div class="heatmap-legend"><span>无</span><div class="heatmap-cell level-0"></div><div class="heatmap-cell level-3"></div><span>是</span></div>`
                 : `<div class="heatmap-legend"><span>少</span><div class="heatmap-cell level-0"></div><div class="heatmap-cell level-1"></div><div class="heatmap-cell level-2"></div><div class="heatmap-cell level-3"></div><div class="heatmap-cell level-4"></div><span>多</span></div>`;
 
-            return `<div class="sublog-chart-card${extraClass}"${extraAttr ? ' ' + extraAttr : ''}>${headerHtml}${titleBar}<div class="sublog-chart-body"><div class="heatmap-grid">${cols}</div></div>${legend}${footerHtml}</div>`;
+            return `<div class="sublog-chart-card${extraClass}"${extraAttr ? ' ' + extraAttr : ''}${extraStyle}>${titleBar}<div class="sublog-chart-body"><div class="heatmap-grid">${cols}</div></div>${legend}</div>`;
         }
 
         async function postReview(loadingTip) {
