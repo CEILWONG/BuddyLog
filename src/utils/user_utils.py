@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any
 from src.services.auth_service import get_password_hash
+from src.utils.file_utils import logical_today
 
 # 获取项目根目录（main.py 所在目录）
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -99,7 +100,7 @@ def create_user(email: str, password: str) -> Optional[Dict[str, Any]]:
     # 生成用户ID和创建时间
     user_id = _generate_user_id()
     created_at = datetime.now().isoformat()
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = logical_today().isoformat()
     
     # 创建用户信息
     user_info = {
@@ -197,7 +198,7 @@ def update_user_usage(email: str, conversations_increment: int = 0, tokens_incre
     if email not in index:
         return False
     
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = logical_today().isoformat()
     usage = index[email].get("usage", {})
     
     # 检查是否需要重置今日统计
@@ -253,7 +254,7 @@ def check_user_limit(email: str) -> Dict[str, Any]:
     else:
         max_conversations = DEFAULT_DAILY_MAX_CONVERSATIONS
     
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = logical_today().isoformat()
     
     # 检查是否需要重置
     if usage.get("last_reset_date") != today:

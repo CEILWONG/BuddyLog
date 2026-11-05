@@ -8,6 +8,7 @@ from src.utils.file_utils import (
     load_review,
     save_review,
     load_all_archived_diaries_for_review,
+    logical_today,
 )
 from src.utils.user_utils import (
     get_user_by_email,
@@ -91,7 +92,7 @@ class ReviewService:
                 "is_first": True,
             }
 
-        today = datetime.date.today()
+        today = logical_today()
         days_since = (today - generated_date).days
         conversations_delta = total_conversations - baseline
 
@@ -158,8 +159,8 @@ class ReviewService:
             if meta.get("earliest_date"):
                 earliest = meta["earliest_date"]
             else:
-                earliest = diaries[0].get("date") or datetime.date.today().isoformat()
-            latest = new_diaries[-1].get("date") or datetime.date.today().isoformat()
+                earliest = diaries[0].get("date") or logical_today().isoformat()
+            latest = new_diaries[-1].get("date") or logical_today().isoformat()
             unique_months = sorted({
                 (d.get("date") or "")[:7] for d in diaries if d.get("date")
             })
@@ -167,7 +168,7 @@ class ReviewService:
             prompt = self._build_incremental_prompt(
                 previous_content,
                 new_diaries,
-                today_str=datetime.date.today().isoformat(),
+                today_str=logical_today().isoformat(),
                 earliest=earliest,
                 latest=latest,
                 span_months=span_months,
@@ -185,7 +186,7 @@ class ReviewService:
             diary_text = "\n\n".join(
                 f"【{item['date']}】\n{item['user_text']}" for item in diaries
             )
-            today = datetime.date.today()
+            today = logical_today()
             diary_dates = [it["date"] for it in diaries if it.get("date")]
             earliest = diary_dates[0] if diary_dates else today.isoformat()
             latest = diary_dates[-1] if diary_dates else today.isoformat()
@@ -236,7 +237,7 @@ class ReviewService:
         all_dates = [d.get("date") for d in diaries if d.get("date")]
         meta = {
             "generated_at": now.isoformat(timespec="seconds"),
-            "generated_date": now.date().isoformat(),
+            "generated_date": logical_today().isoformat(),
             "baseline_total_conversations": total_conversations,
             "diary_count": total_diary_count,
             "earliest_date": all_dates[0] if all_dates else "",

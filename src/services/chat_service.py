@@ -9,7 +9,9 @@ from src.utils.file_utils import (
     append_to_draft,
     auto_archive_expired_drafts,
     extract_agent_persona,
-    extract_profile_without_persona
+    extract_profile_without_persona,
+    logical_now,
+    logical_today
 )
 from src.utils.user_utils import extract_usage_tokens, update_user_usage
 from src.utils.llm_utils import (
@@ -46,10 +48,10 @@ class ChatService:
 
         recent_diaries_text = "\n\n".join(recent_diaries[:7]) if recent_diaries else '刚认识不久'
 
-        # 获取当前日期和星期
+        # 获取当前日期和星期（逻辑日期：凌晨 5 点前归属前一天，与【今天】标注一致）
         # 注意：不注入秒级/分钟级时间——高频变化的内容会破坏提供商的 prefix cache，
         # 导致 system prompt 中大量固定内容每轮都全价计费。日期一天才变一次，缓存友好。
-        now = datetime.datetime.now()
+        now = logical_now()
         weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
         weekday = weekdays[now.weekday()]
         date_str = now.strftime('%Y-%m-%d')
@@ -211,10 +213,12 @@ class ChatService:
         recent_diaries = load_recent_diaries(user_email)
         
         now = datetime.datetime.now()
+        logical = logical_now()
         weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-        weekday = weekdays[now.weekday()]
-        date_str = now.strftime('%Y-%m-%d')
+        weekday = weekdays[logical.weekday()]
+        date_str = logical.strftime('%Y-%m-%d')
         # 只保留小时粒度（供开场白感知时段），避免秒级时间破坏 prefix cache
+        # 时段感知用真实小时，日期用逻辑日期（凌晨 5 点前仍属前一天）
         time_str = now.strftime('%H:00')
         
         recent_text = '\n'.join(recent_diaries[:3]) if recent_diaries else '暂无近期的日记记录'
@@ -278,16 +282,15 @@ class ChatService:
             print(f"[Background] Auto-archive failed for user {user_email}: {e}")
     
     def _has_expired_drafts(self, user_email: str = None) -> bool:
-        """检查是否存在过期草稿（非今天的草稿）"""
+        """检查是否存在过期草稿（非逻辑今天的草稿）"""
         import os
-        from datetime import date
         from src.utils.file_utils import _get_diaries_dir, _parse_draft_date
-        
+
         diaries_dir = _get_diaries_dir(user_email)
         if not os.path.exists(diaries_dir):
             return False
-        
-        today = date.today()
+
+        today = logical_today()
         for filename in os.listdir(diaries_dir):
             if filename.endswith('_draft.md'):
                 draft_date = _parse_draft_date(filename)

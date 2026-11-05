@@ -9,7 +9,8 @@ from src.utils.file_utils import (
     get_today_draft_file, 
     _load_md_file, 
     _extract_conversation_from_draft,
-    _parse_draft_date
+    _parse_draft_date,
+    logical_today
 )
 from src.services.memory_service import MemoryService
 from src.utils.user_utils import extract_usage_tokens, update_user_usage
@@ -78,7 +79,7 @@ class ArchiveService:
     def generate_diary_article(self, conversation: list, date_str: str = None, user_email: str = None) -> tuple:
         """生成日记文章，返回 (日记文章, 本次消耗的token数)"""
         if not date_str:
-            date_str = datetime.date.today().isoformat()
+            date_str = logical_today().isoformat()
 
         # 提取用户发言（忽略Buddy的回应）
         user_messages = [
@@ -161,7 +162,7 @@ class ArchiveService:
         if draft_date:
             date_str = draft_date.isoformat()
         else:
-            date_str = datetime.date.today().isoformat()
+            date_str = logical_today().isoformat()
         
         # 注释掉结构化提取以加速归档（如需恢复，取消下面两行注释）
         # structured_data = self.extract_structured_data(conversation)

@@ -52,6 +52,7 @@ from src.utils.file_utils import (
     load_article_draft, save_article_draft, delete_article_draft,
     load_sub_logs, create_sub_log_project, delete_sub_log_project,
     upsert_sub_log_record, delete_sub_log_record,
+    logical_today,
 )
 from src.utils.auth_utils import (
     create_access_token, get_current_user, get_current_admin,
@@ -102,8 +103,8 @@ async def register(user_data: UserRegister, request: Request):
     # 获取客户端 IP
     client_ip = request.client.host
     
-    # 检查该 IP 今天是否已达到注册上限
-    today = date.today().isoformat()
+    # 检查该 IP 今天是否已达到注册上限（按逻辑日期：凌晨 5 点前归属前一天）
+    today = logical_today().isoformat()
     ip_record = ip_register_cache.get(client_ip, {})
     register_count = ip_record.get(today, 0)
     if register_count >= MAX_REGISTERS_PER_IP_PER_DAY:
@@ -189,7 +190,7 @@ async def get_me(current_email: str = Depends(get_current_user)):
                 "total_tokens": 0,
                 "today_conversations": 0,
                 "today_tokens": 0,
-                "last_reset_date": date.today().isoformat()
+                "last_reset_date": logical_today().isoformat()
             },
             "effective_daily_limit": 0,
             "model_name": MODEL,
@@ -285,7 +286,7 @@ def _require_user_exists(email: str):
 async def admin_list_users(sort_by: str = "conversations", order: str = "desc", _: str = Depends(get_current_admin)):
     """获取全量用户列表，可按对话总量 / 今日对话 / token 用量排序"""
     all_users = get_all_users()
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = logical_today().isoformat()
     env_limit = os.getenv("DAILY_MAX_CONVERSATIONS")
     result = []
     for email, info in all_users.items():

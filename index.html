@@ -5068,7 +5068,7 @@
             const dateInput = document.getElementById('sublog-record-date');
             const valueInput = document.getElementById('sublog-record-value');
             const hint = document.getElementById('sublog-record-hint');
-            const today = new Date().toISOString().slice(0, 10);
+            const today = formatDate(getLogicalToday());
             dateInput.value = today;
 
             if (project.type === 'boolean') {
@@ -5263,8 +5263,7 @@
             const type = project.type;
             const unit = project.unit ? ` ${project.unit}` : '';
             const WEEKS = 20;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const today = getLogicalToday();
             const todayStr = formatDate(today);
             const dayOfWeek = today.getDay(); // 0 = 周日
 
@@ -5676,8 +5675,7 @@
             const dayCounts = dailyStats || {};
 
             const WEEKS = 20; // 展示近 20 周 ≈ 5 个月
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const today = getLogicalToday();
             const todayStr = formatDate(today);
             const dayOfWeek = today.getDay(); // 0 = 周日
 
@@ -5760,6 +5758,14 @@
             const m = String(d.getMonth() + 1).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
             return `${y}-${m}-${day}`;
+        }
+
+        // 逻辑今天：凌晨 5 点前归属前一天（与后端 DAY_BOUNDARY_HOUR 一致）
+        function getLogicalToday() {
+            const d = new Date();
+            if (d.getHours() < 5) d.setDate(d.getDate() - 1);
+            d.setHours(0, 0, 0, 0);
+            return d;
         }
 
         function appendMessage(role, text, isArticle = false) {

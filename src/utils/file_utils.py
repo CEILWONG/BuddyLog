@@ -9,6 +9,19 @@ from typing import Optional
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.getenv("DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
 
+# 日界小时：凌晨 5 点前的时间归属前一天（"一天" = 当天 05:00 ~ 次日 05:00）
+DAY_BOUNDARY_HOUR = 5
+
+
+def logical_now() -> datetime.datetime:
+    """逻辑当前时间：自然时间减去日界小时数，使凌晨时段归属前一天"""
+    return datetime.datetime.now() - datetime.timedelta(hours=DAY_BOUNDARY_HOUR)
+
+
+def logical_today() -> datetime.date:
+    """逻辑今天：凌晨 DAY_BOUNDARY_HOUR 点前仍算前一天"""
+    return logical_now().date()
+
 
 def ensure_data_dir():
     """确保数据目录存在"""
@@ -175,7 +188,7 @@ def _sort_diary_files(filename: str):
 def load_recent_diaries(user_email: Optional[str] = None):
     """加载最近日记的对话记录（带日期标注）"""
     diaries_dir = _get_diaries_dir(user_email)
-    today = datetime.date.today().isoformat()
+    today = logical_today().isoformat()
     
     if not os.path.exists(diaries_dir):
         return []
@@ -247,7 +260,7 @@ def load_archived_conversations_by_date(user_email: Optional[str] = None):
 def get_today_draft_file(user_email: Optional[str] = None):
     """获取今天的草稿文件路径"""
     diaries_dir = _get_diaries_dir(user_email)
-    today = datetime.date.today().isoformat()
+    today = logical_today().isoformat()
     draft_path = os.path.join(diaries_dir, f"diary_{today}_draft.md")
     return draft_path if os.path.exists(draft_path) else None
 
@@ -293,7 +306,7 @@ def scan_recent_user_activity(limit: int = 20):
 def append_to_draft(user_msg, assistant_reply, user_email: Optional[str] = None, is_article: bool = False):
     """追加内容到今天的草稿文件（is_article 时用户消息带（文章）标记）"""
     diaries_dir = _get_diaries_dir(user_email)
-    today = datetime.date.today().isoformat()
+    today = logical_today().isoformat()
     draft_path = os.path.join(diaries_dir, f"diary_{today}_draft.md")
 
     # 确保目录存在
@@ -459,7 +472,7 @@ def finalize_diary(structured_data: dict, conversation: list, diary_article: str
     if draft_date:
         date_str = draft_date.isoformat()
     else:
-        date_str = datetime.date.today().isoformat()
+        date_str = logical_today().isoformat()
     
     # 确保目录存在
     os.makedirs(diaries_dir, exist_ok=True)
@@ -569,7 +582,7 @@ def _extract_conversation_from_draft(content: str) -> list:
 def auto_archive_expired_drafts(archive_service, user_email: Optional[str] = None):
     """自动归档过期的草稿（非今天的）"""
     diaries_dir = _get_diaries_dir(user_email)
-    today = datetime.date.today()
+    today = logical_today()
     archived = []
     
     if not os.path.exists(diaries_dir):
